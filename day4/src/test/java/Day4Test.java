@@ -8,7 +8,7 @@ public class Day4Test {
     public void testDay4Result1() {
         try {
             Day4 day4 = new Day4();
-            assertEquals(-1, day4.getResult1());
+            assertEquals(240, day4.getResult1());
         } catch(Exception e) {
             assert(false);
         }
