@@ -1,0 +1,15 @@
+
+> Task :test
+
+Day3Test > testDay1Result1 FAILED
+    java.lang.AssertionError: expected:<4> but was:<105378>
+        at org.junit.Assert.fail(Assert.java:88)
+        at org.junit.Assert.failNotEquals(Assert.java:834)
+        at org.junit.Assert.assertEquals(Assert.java:645)
+        at org.junit.Assert.assertEquals(Assert.java:631)
+        at Day3Test.testDay1Result1(Day3Test.java:12)
+
+Day3Test > testDay1Result2 PASSED
+
+> Task :test FAILED
+3 actionable tasks: 3 executed

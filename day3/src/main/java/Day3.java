@@ -70,7 +70,7 @@ final class Claim {
 
     Claim(@NotNull String claim) {
         Pattern pattern = Pattern.compile("#(\\d+)\\s*@\\s*(\\d+),(\\d+):\\s*(\\d+)x(\\d+)");
-        Matcher match = pattern.matcher(claim);
+        Matcher match = pa  ttern.matcher(claim);
         if(match.matches()) {
             id = Integer.valueOf(match.group(1));
             leftEdge = Integer.valueOf(match.group(2));
