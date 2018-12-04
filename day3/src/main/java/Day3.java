@@ -1,15 +1,17 @@
+import org.jetbrains.annotations.NotNull;
+
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Day3 {
+class Day3 {
     private Claim[] claims;
     private int[][] area;
 
-    Day3(String inputFile) throws Exception {
-        String input = new String(Files.readAllBytes(Paths.get(inputFile)));
-        claims = input.lines().map(l -> new Claim(l)).toArray(Claim[]::new);
+    Day3() throws Exception {
+        String input = new String(Files.readAllBytes(Paths.get("src/test/java/input.txt")));
+        claims = input.lines().map(Claim::new).toArray(Claim[]::new);
     }
 
     int getResult1() {
@@ -22,9 +24,8 @@ public class Day3 {
             }
         }
         int overlapNumber = 0;
-        for (int i = 0; i < claims.length; i++) {
+        for (var claim : claims) {
             // draw each rectangle starting at (leftEdge, topEdge) with (width, height)
-            var claim = claims[i];
             for (int r = claim.topEdge; r < claim.topEdge + claim.height; r++) {
                 for (int c = claim.leftEdge; c < claim.leftEdge + claim.width; c++) {
                     if (area[r][c] == 0) {
@@ -56,7 +57,7 @@ public class Day3 {
     }
 }
 
-class Claim {
+final class Claim {
     final int id;
     final int leftEdge;
     final int topEdge;
@@ -67,7 +68,7 @@ class Claim {
     static int maxWidth;
     static int maxHeight;
 
-    Claim(String claim) {
+    Claim(@NotNull String claim) {
         Pattern pattern = Pattern.compile("#(\\d+)\\s*@\\s*(\\d+),(\\d+):\\s*(\\d+)x(\\d+)");
         Matcher match = pattern.matcher(claim);
         if(match.matches()) {
