@@ -1,0 +1,6 @@
+enum State {
+  BEGINS_SHIFT,
+  WAKES_UP,
+  FALLS_ASLEEP
+}
+
