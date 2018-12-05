@@ -2,143 +2,123 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.OptionalInt;
-import java.util.Set;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 class Day4 {
-    private Record[] records;
 
-    Day4() throws Exception {
-        String input = new String(Files.readAllBytes(Paths.get("src/test/java/input.txt")));
-        records = input.lines().map(Record::new).sorted((r1, r2) -> r1.time.compareTo(r2.time)).toArray(Record[]::new);
-        updateId();
-        removeAllNotLazyGuards();
+  private Record[] records;
+
+  Day4() throws Exception {
+    String input = new String(Files.readAllBytes(Paths.get("src/test/java/input.txt")));
+    records =
+        input.lines().map(Record::new).sorted(Comparator.comparing(Record::getTime))
+            .toArray(Record[]::new);
+    updateId();
+  }
+
+  private void updateId() {
+    int currentId = records[0].getId();
+    for (Record record : records) {
+      if (record.getId() == 0) {
+        record.setId(currentId);
+      } else {
+        currentId = record.getId();
+      }
+    }
+  }
+
+  private int[] getSleepTimeById(int id) {
+    LocalDateTime[] asleepTime =
+        Arrays.stream(records).filter(r -> r.getId() == id && r.getState() == State.FALLS_ASLEEP)
+            .map(Record::getTime).toArray(LocalDateTime[]::new);
+    LocalDateTime[] wakeUpTime =
+        Arrays.stream(records).filter(r -> r.getId() == id && r.getState() == State.WAKES_UP)
+            .map(Record::getTime).toArray(LocalDateTime[]::new);
+    return IntStream.range(0, asleepTime.length)
+        .map(i -> wakeUpTime[i].getMinute() - asleepTime[i].getMinute()).toArray();
+  }
+
+  private int getMostSleepingId() {
+    int mostSleepingId = 0;
+    int maxSum = 0;
+    for (int id :
+        Arrays.stream(records).map(Record::getId).collect(Collectors.toCollection(HashSet::new))) {
+      int sum = Arrays.stream(getSleepTimeById(id)).sum();
+      if (sum > maxSum) {
+        mostSleepingId = id;
+        maxSum = sum;
+      }
+    }
+    return mostSleepingId;
+  }
+
+
+  private int[] countMinutesSleptById(int id) {
+    int[] minutes = new int[60];
+    int[] asleepTime =
+        Arrays.stream(records).filter(r -> r.getId() == id && r.getState() == State.FALLS_ASLEEP)
+            .mapToInt(r -> r.getTime().getMinute()).toArray();
+    int[] wakeUpTime =
+        Arrays.stream(records).filter(r -> r.getId() == id && r.getState() == State.WAKES_UP)
+            .mapToInt(r -> r.getTime().getMinute()).toArray();
+    for (int i = 0; i < asleepTime.length; i++) {
+      for (int from = asleepTime[i]; from < wakeUpTime[i]; from++) {
+        minutes[from]++;
+      }
+    }
+    return minutes;
+  }
+
+  private int getMostSleptMinute(int[] minutes) {
+    OptionalInt maxMinuteCount = Arrays.stream(minutes).max();
+    if (maxMinuteCount.isPresent()) {
+      OptionalInt maxMinute =
+          IntStream.range(0, minutes.length).filter(i -> minutes[i] == maxMinuteCount.getAsInt())
+              .findFirst();
+      if (maxMinute.isPresent()) {
+        return maxMinute.getAsInt();
+      }
     }
 
-    void removeAllNotLazyGuards() {
-        Set<Integer> sleepingIds = Arrays.stream(records).filter(r -> r.state == State.FALLS_ASLEEP).map(r -> r.id).collect(Collectors.toCollection(HashSet::new));
-        Set<Integer> toBeRemovedIds = Arrays.stream(records).map(r -> r.id).collect(Collectors.toCollection(HashSet::new));
-        toBeRemovedIds.removeAll(sleepingIds);
-        records  = Arrays.stream(records).filter(r -> !toBeRemovedIds.contains(r.id)).toArray(Record[]::new);
-    }
-    void updateId() {
-        int currentId = records[0].id;
-        for (Record record: records) {
-            if (record.id == 0) {
-                record.id = currentId;
-            } else {
-                currentId = record.id;
-            }
-        }
+    return -1;
+  }
+
+  private int getMostSleptMinuteCount(int[] minutes) {
+    OptionalInt mostSleptMinute = Arrays.stream(minutes).max();
+    if (mostSleptMinute.isPresent()) {
+      return mostSleptMinute.getAsInt();
     }
 
-    int[] getSleepTimeById(int id) {
-        LocalDateTime[] asleepTime = Arrays.stream(records).filter(r -> r.id == id && r.state == State.FALLS_ASLEEP).map(r -> r.time).toArray(LocalDateTime[]::new);
-        LocalDateTime[] wakeUpTime = Arrays.stream(records).filter(r -> r.id == id && r.state == State.WAKES_UP).map(r -> r.time).toArray(LocalDateTime[]::new);
-        return IntStream.range(0, asleepTime.length).map(i -> Math.abs(wakeUpTime[i].getMinute() - asleepTime[i].getMinute())).toArray();
+    return -1;
+  }
+
+  int getResult1() {
+    int mostSleepingId = getMostSleepingId();
+    int[] minutes = countMinutesSleptById(mostSleepingId);
+    return mostSleepingId * getMostSleptMinute(minutes);
+  }
+
+  int getResult2() {
+    int idWithMaxCount = 0;
+    int countMax = 0;
+    for (int id :
+        Arrays.stream(records).map(Record::getId).collect(Collectors.toCollection(HashSet::new))) {
+      int[] minutes = countMinutesSleptById(id);
+      int count = getMostSleptMinuteCount(minutes);
+      if (count > countMax) {
+        countMax = count;
+        idWithMaxCount = id;
+      }
     }
 
-    int getMostSleepingId() {
-        int mostSleepingId = 0;
-        int maxSum = 0;
+    int[] minutes = countMinutesSleptById(idWithMaxCount);
+    return getMostSleptMinute(minutes) * idWithMaxCount;
 
-        for (Record record: records) {
-            int sum = Arrays.stream(getSleepTimeById(record.id)).sum();
-//            System.out.print(sum + " " + Arrays.stream(getSleepTimeById(record.id)).mapToObj(i -> String.valueOf(i)).reduce("", (acc, x) -> acc + x + " "));
-            if (sum > maxSum) {
-                mostSleepingId = record.id;
-                maxSum = sum;
-            }
-        }
-        return mostSleepingId;
-    }
-
-    public int getResult1() {
-        int mostSleepingId = getMostSleepingId();
-        OptionalInt longestSleep = Arrays.stream(getSleepTimeById(mostSleepingId)).max();
-        if (longestSleep.isPresent()) {
-            System.out.println(longestSleep.getAsInt());
-            return (longestSleep.getAsInt() - 1) * mostSleepingId;
-        }
-        return 0;
-    }
-
-    public int getIdWhoSleepsTheMost() {
-        int maxSum = 0;
-        int idByMax = 0;
-        for (int i : Arrays.stream(records).map(r -> r.id).collect(Collectors.toCollection(HashSet::new))) {
-//            System.out.println("Id: " + i);
-            int sum = Arrays.stream(getMinutesOfSleep(i)).sum();
-//            System.out.println(sum);
-//            int sum = Arrays.stream(getMinutesOfSleep(i)).peek(r -> System.out.print(r + " ")).sum();
-//            System.out.println();
-            if (sum > maxSum) {
-                idByMax = i;
-                maxSum = sum;
-            }
-        }
-
-        return idByMax;
-    }
-
-    public int getResult2() {
-        return 0;
-    }
+  }
 }
 
-class Record {
-    LocalDateTime time;
-    int id;
-    State state;
-    final static Pattern beginShift = Pattern.compile("\\[(\\d+)\\-(\\d+)\\-(\\d+)\\s*(\\d+):(\\d+)\\]\\s*Guard\\s*#(\\d+)\\s*begins shift");
-    final static Pattern fallsAsleep = Pattern.compile("\\[(\\d+)\\-(\\d+)\\-(\\d+)\\s*(\\d+):(\\d+)\\]\\s*falls asleep");
-    final static Pattern wakesUp = Pattern.compile("\\[(\\d+)\\-(\\d+)\\-(\\d+)\\s*(\\d+):(\\d+)\\]\\s*wakes up");
 
-    Record(String record) {
-        Matcher match = beginShift.matcher(record);
-        if (match.matches()) {
-            time = LocalDateTime.of(
-                    Integer.valueOf(match.group(1)),
-                    Integer.valueOf(match.group(2)),
-                    Integer.valueOf(match.group(3)),
-                    Integer.valueOf(match.group(4)),
-                    Integer.valueOf(match.group(5)));
-            id = Integer.valueOf(match.group(6));
-            state = State.BEGINS_SHFIT;
-        }
-        match = fallsAsleep.matcher(record);
-        if (match.matches()) {
-            time = LocalDateTime.of(
-                    Integer.valueOf(match.group(1)),
-                    Integer.valueOf(match.group(2)),
-                    Integer.valueOf(match.group(3)),
-                    Integer.valueOf(match.group(4)),
-                    Integer.valueOf(match.group(5)));
-            state = State.FALLS_ASLEEP;
-        }
-
-        match = wakesUp.matcher(record);
-        if (match.matches()) {
-            time = LocalDateTime.of(
-                    Integer.valueOf(match.group(1)),
-                    Integer.valueOf(match.group(2)),
-                    Integer.valueOf(match.group(3)),
-                    Integer.valueOf(match.group(4)),
-                    Integer.valueOf(match.group(5)));
-            state = State.WAKES_UP;
-    }
-
-    public String toString() {
-        return id + "\n" + time + "\n" + state + "\n";
-    }
-}
-
-enum State {
-    BEGINS_SHIFT,
-    WAKES_UP,
-    FALLS_ASLEEP
-}
