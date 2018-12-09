@@ -8,7 +8,7 @@ public class Day6Test {
     public void testDay6Result1() {
         try {
             Day6 day6 = new Day6();
-            assertEquals(17, day6.getResult1());
+            assertEquals(3290, day6.getResult1());
         } catch(Exception e) {
             assert(false);
         }
@@ -17,7 +17,7 @@ public class Day6Test {
     public void testDay6Result2() {
         try {
             Day6 day6 = new Day6();
-            assertEquals(16, day6.getResult2());
+            assertEquals(45602, day6.getResult2());
         } catch(Exception e) {
             assert(false);
         }
