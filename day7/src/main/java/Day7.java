@@ -11,11 +11,13 @@ import java.util.stream.Stream;
 //Step C must be finished before step A can begin.
 class Day7 {
     private Map<Character, Set<Character>> steps = new HashMap<>();
+    private Map<Character, Set<Character>> ancestors = new HashMap<>();
     private final static Pattern pattern = Pattern.compile("Step ([A-Z]) must be finished before step ([A-Z]) can begin.");
+
     Day7() throws Exception {
         String[] lines = Files.lines(Path.of("src/test/java/input.txt")).toArray(String[]::new);
 
-        for (String line: lines) {
+        for (String line : lines) {
             Matcher match = pattern.matcher(line);
             if (match.matches()) {
                 char parentStep = match.group(1).charAt(0);
@@ -28,7 +30,9 @@ class Day7 {
                 }
             }
         }
-        System.out.println(steps);
+        for (char c : steps.values().stream().flatMap(s -> s.stream()).collect(Collectors.toCollection(TreeSet::new))) {
+            ancestors.put(c, steps.entrySet().stream().filter(e -> e.getValue().contains(c)).map(e -> e.getKey()).collect(Collectors.toCollection(TreeSet::new)));
+        }
     }
 
     private Optional<Character> getFirstStep() {
@@ -40,15 +44,26 @@ class Day7 {
     int getResult1() {
         char firstStep = getFirstStep().get();
         Set<Character> toProcessSteps = steps.get(firstStep);
+        System.out.print(firstStep);
+        processSteps(toProcessSteps);
         return -1;
     }
 
     void processSteps(Set<Character> toProcessSteps) {
-       if (toProcessSteps.size() == 0) {
-           return;
-       }
+        if (toProcessSteps.size() == 0) {
+            return;
+        }
 
+        char nextStep = toProcessSteps.stream().findFirst().get();
+        System.out.print(nextStep);
+        toProcessSteps.remove(nextStep);
 
+        Set<Character> nextSteps = steps.get(nextStep);
+        boolean allAncestorsProcessed = nextSteps.stream().map(s -> ancestors.get(s)).filter(a -> a.stream().anyMatch(as -> toProcessSteps.contains(as))).count() == 0;
+        if (allAncestorsProcessed) {
+            toProcessSteps.addAll(nextSteps);
+        }
+        processSteps(toProcessSteps);
     }
 
     int getResult2() {
