@@ -1,8 +1,8 @@
-import javax.swing.text.html.Option;
+import com.sun.source.util.Trees;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -24,21 +24,31 @@ class Day7 {
                 if (steps.containsKey(parentStep)) {
                     steps.get(parentStep).add(childStep);
                 } else {
-                    steps.put(parentStep, Stream.of(childStep).collect(Collectors.toCollection(HashSet::new)));
+                    steps.put(parentStep, Stream.of(childStep).collect(Collectors.toCollection(TreeSet::new)));
                 }
             }
         }
+        System.out.println(steps);
     }
 
     private Optional<Character> getFirstStep() {
-        Set<Character> parents = new HashSet<>(steps.keySet());
-        parents.removeAll(steps.values().stream().flatMap(v -> v.stream()).collect(Collectors.toCollection(HashSet::new)));
+        SortedSet<Character> parents = new TreeSet<>(steps.keySet());
+        parents.removeAll(steps.values().stream().flatMap(v -> v.stream()).collect(Collectors.toCollection(TreeSet::new)));
         return parents.stream().findFirst();
     }
 
     int getResult1() {
-        System.out.println(getFirstStep().get());
+        char firstStep = getFirstStep().get();
+        Set<Character> toProcessSteps = steps.get(firstStep);
         return -1;
+    }
+
+    void processSteps(Set<Character> toProcessSteps) {
+       if (toProcessSteps.size() == 0) {
+           return;
+       }
+
+
     }
 
     int getResult2() {
