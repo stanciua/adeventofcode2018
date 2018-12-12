@@ -59,9 +59,11 @@ class Day7 {
         toProcessSteps.remove(nextStep);
 
         Set<Character> nextSteps = steps.get(nextStep);
-        boolean allAncestorsProcessed = nextSteps.stream().map(s -> ancestors.get(s)).filter(a -> a.stream().anyMatch(as -> toProcessSteps.contains(as))).count() == 0;
-        if (allAncestorsProcessed) {
-            toProcessSteps.addAll(nextSteps);
+        if (nextSteps != null) {
+            boolean allAncestorsProcessed = nextSteps.stream().map(s -> ancestors.get(s)).filter(c -> !c.isEmpty()).filter(a -> a.stream().anyMatch(as -> toProcessSteps.contains(as))).count() == 0;
+            if (allAncestorsProcessed) {
+                toProcessSteps.addAll(nextSteps);
+            }
         }
         processSteps(toProcessSteps);
     }
