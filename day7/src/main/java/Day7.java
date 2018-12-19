@@ -85,10 +85,7 @@ class Day7 {
   }
 
   int getResult2() {
-    Set<Character> startSteps = getStartingSteps();
-    StringBuilder output = new StringBuilder();
-    processSteps(output, startSteps);
-    final int BOUND = output.length();
+    final int BOUND = 26;
     final int PRODUCERS = 1;
     final int CONSUMERS = 2;
     final int POISON_PILL = Integer.MAX_VALUE;
@@ -102,9 +99,49 @@ class Day7 {
     } catch(InterruptedException e){
       e.printStackTrace();
     }
+
+    // start the worker threads
+    Thread[] workers = new Thread[CONSUMERS];
+    for (int i = 0; i < workers.length; i++) {
+      workers[i] = new Thread(new Worker(queue, POISON_PILL));
+      workers[i].start();
+    }
+
+    try {
+      for (int i = 0; i < workers.length; i++) {
+        workers[i].join();
+      }
+    } catch( InterruptedException e) {
+      e.printStackTrace();
+    }
     return -1;
   }
 
+  static class Worker implements Runnable {
+    private BlockingQueue<Integer> queue;
+    private final int poisonPill;
+    public Worker(BlockingQueue<Integer> queue, int poisonPill) {
+      this.queue = queue;
+      this.poisonPill = poisonPill;
+    }
+
+    public void run() {
+      try {
+        while(true) {
+          int step = queue.take();
+          if (step == poisonPill) {
+            return;
+          }
+          for (int i = 0; i < step; i++){
+            System.out.println(Thread.currentThread().getName() + " sub-step " + i + " done");
+          }
+          System.out.println(Thread.currentThread().getName() + " step: " + step);
+        }
+      }catch(InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
   static class StepsProducer implements Runnable {
     private BlockingQueue<Integer> stepsQueue;
     private final int poisonPill;
@@ -135,7 +172,7 @@ class Day7 {
           continue;
         }
         seenSteps.add(c);
-        System.out.println("Produced: " + ALPHABET.indexOf(c) + 1);
+        System.out.println("Produced: " + (ALPHABET.indexOf(c) + 1));
         stepsQueue.put(ALPHABET.indexOf(c) + 1);
         Set<Character> children = steps.get(c);
         if (children != null) {
