@@ -9,7 +9,7 @@ class Day8 {
 
   Day8() throws Exception {
     tree =
-        Files.lines(Path.of("/Users/stanciua/prog/adeventofcode2018/day8/src/test/java/input.txt"))
+        Files.lines(Path.of("src/test/java/input.txt"))
             .flatMap(line -> Arrays.stream(line.split(" ")))
             .mapToInt(Integer::parseInt)
             .toArray();
@@ -17,18 +17,19 @@ class Day8 {
 
   private Node buildTree(int[] tree) {
     ArrayList<Node> parents = new ArrayList<>();
-    int i = 2;
+    final int header = 2;
+    int i = header;
     Node root = new Node(tree[0], tree[1]);
     parents.add(root);
     while (i != tree.length) {
       if (tree[i] == 0) {
-        Node child = new Node(tree[i], tree[i + 1]);
+        int noOfChildes = tree[i];
+        int noOfMetadata = tree[i + 1];
+        Node child = new Node(noOfChildes, noOfMetadata);
         Node parent = parents.get(parents.size() - 1);
-        child.setParent(parent);
         parent.addChild(child);
-        child.setMetadata(Arrays.copyOfRange(tree, i + 2, i + tree[i + 1] + 2));
-        i += tree[i + 1];
-        i += 2;
+        child.setMetadata(Arrays.copyOfRange(tree, i + header, i + noOfMetadata + header));
+        i += noOfMetadata + header;
       } else {
         Node parent = parents.get(parents.size() - 1);
         if (parent.noOfChilds == parent.childs.size()) {
@@ -36,11 +37,12 @@ class Day8 {
           i += parent.noOfMetada;
           parents.remove(parent);
         } else {
-          Node child = new Node(tree[i], tree[i + 1]);
-          child.setParent(parent);
+          int noOfChilds = tree[i];
+          int noOfMetadata = tree[i + 1];
+          Node child = new Node(noOfChilds, noOfMetadata);
           parent.addChild(child);
           parents.add(child);
-          i += 2;
+          i += header;
         }
       }
     }
@@ -52,7 +54,6 @@ class Day8 {
     if (node.noOfChilds == 0) {
       return;
     }
-
     for (Node child : node.childs) {
       metadataTotal.add(child.metadata);
       sumMetadata(child, metadataTotal);
@@ -100,7 +101,6 @@ class Day8 {
       this.noOfMetada = noOfMetada;
       this.childs = new ArrayList<>();
       this.metadata = new ArrayList<>();
-      this.parent = null;
     }
 
     void setParent(Node parent) {
