@@ -1,55 +1,65 @@
-import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.Arrays;
-import java.util.OptionalInt;
+import java.util.OptionalLong;
+import java.util.stream.IntStream;
 
 class Day9 {
   private int noOfPlayers;
   private int lastMarble;
-  private int[] playerScores;
-  private ArrayList<Integer> circle;
-  private int currentMarble;
+  private long[] playerScores;
+  private ArrayDeque<Integer> circle;
 
   Day9(int noOfPlayers, int lastMarble) {
     this.noOfPlayers = noOfPlayers;
     this.lastMarble = lastMarble;
-    playerScores = new int[noOfPlayers];
-    circle = new ArrayList<>(lastMarble + 1);
+    playerScores = new long[noOfPlayers];
+    circle = new ArrayDeque<>();
   }
 
-  int getResult1() {
-    circle.add(0);
-    currentMarble = 0;
-    int player = 0;
-    for (int i = 1; i <= lastMarble; i++) {
-      if (i % 23 == 0) {
-        playerScores[player] += i;
-        int removalPosition;
-        if (currentMarble < 7) {
-          int index = 7 - currentMarble;
-          removalPosition = circle.size() - index;
-        } else {
-          removalPosition = currentMarble - 7;
-        }
-        playerScores[player] += circle.get(removalPosition);
-        circle.remove(removalPosition);
-        currentMarble = removalPosition;
-        player = (player + 1) % noOfPlayers;
-        continue;
-      }
-      int insertionIndex = (currentMarble + 1) % circle.size();
-      circle.add(insertionIndex + 1, i);
-      currentMarble = insertionIndex + 1;
-      player = (player + 1) % noOfPlayers;
-    }
-    OptionalInt maxScore = Arrays.stream(playerScores).max();
-    if (maxScore.isPresent()) {
-      return maxScore.getAsInt();
+  private void rotate(ArrayDeque<Integer> deque, int num) {
+    if (num == 0) {
+      return;
     }
 
+    if (num > 0) {
+      IntStream.range(0, num)
+          .forEach(
+              e -> {
+                Integer marble = deque.removeLast();
+                deque.addFirst(marble);
+              });
+    } else {
+      IntStream.range(0, Math.abs(num) - 1)
+          .forEach(
+              e -> {
+                Integer marble = deque.remove();
+                deque.addLast(marble);
+              });
+    }
+  }
+
+  long getResult1() {
+    circle.add(0);
+    IntStream.range(1, lastMarble)
+        .forEach(
+            i -> {
+              if (i % 23 == 0) {
+                rotate(circle, -7);
+                playerScores[i % noOfPlayers] += i + circle.pop();
+              } else {
+                rotate(circle, 2);
+                circle.addLast(i);
+              }
+            });
+
+    OptionalLong maxScore = Arrays.stream(playerScores).max();
+    if (maxScore.isPresent()) {
+      return maxScore.getAsLong();
+    }
     return 0;
   }
 
-  int getResult2() {
-    return -1;
+  long getResult2() {
+    return getResult1();
   }
 }

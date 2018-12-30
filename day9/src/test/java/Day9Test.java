@@ -16,8 +16,8 @@ public class Day9Test {
     @Test
     public void testDay6Result2() {
         try {
-            Day9 day9 = new Day9(465, 7194000);
-            assertEquals(-1, day9.getResult1());
+            Day9 day9 = new Day9(465,7194000 );
+            assertEquals(3187566597L, day9.getResult2());
         } catch(Exception e) {
             assert(false);
         }
