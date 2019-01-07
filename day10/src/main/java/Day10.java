@@ -96,7 +96,7 @@ public class Day10 {
   }
 
   String getResult1() {
-    while (!isPositionDistanceSmallEnough()) {
+    while (!areColumnsNextToOneAnother()) {
       updatePositionWithVelocity();
     }
 
@@ -138,21 +138,22 @@ public class Day10 {
     return -1;
   }
 
-  boolean isPositionDistanceSmallEnough() {
-    for (int i = 0; i < positions.size() - 1; i++) {
-      for (int j = i + 1; j < positions.size(); j++) {
-        var position1 = positions.get(i);
-        var position2 = positions.get(j);
-        int distance =
-            Math.abs(position1.getValue0() - position2.getValue0())
-                + Math.abs(position1.getValue1() + position2.getValue1());
-        System.out.println(distance);
-        if (distance > 300) {
-          return false;
-        }
-      }
-    }
-    return true;
+  boolean areColumnsNextToOneAnother() {
+      int[] columns = positions.stream().mapToInt(p -> p.getValue0()).toArray();
+      Map<Integer, Integer> counts = new HashMap<>();
+    Arrays.stream(columns)
+        .forEach(
+            c -> {
+              if
+              (counts.containsKey(c)) {
+                int val = counts.get(c);
+                counts.put(c, val + 1);
+              } else {
+                counts.put(c, 1);
+              }
+            });
+
+    return counts.entrySet().stream().map(e -> e.getValue()).anyMatch(v -> v > 5);
   }
 
   public static void main(String[] args) {
