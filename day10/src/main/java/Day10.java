@@ -18,7 +18,7 @@ public class Day10 {
 
   Day10() throws Exception {
     String[] lines =
-        Files.lines(Path.of("/Users/stanciua/prog/adeventofcode2018/day10/src/test/java/input.txt"))
+        Files.lines(Path.of("/home/stanciua/adeventofcode2018/day10/src/test/java/input.txt"))
             .toArray(String[]::new);
     positions = new ArrayList<>();
     velocities = new ArrayList<>();
@@ -140,20 +140,20 @@ public class Day10 {
 
   boolean areColumnsNextToOneAnother() {
       int[] columns = positions.stream().mapToInt(p -> p.getValue0()).toArray();
-      Map<Integer, Integer> counts = new HashMap<>();
-    Arrays.stream(columns)
-        .forEach(
-            c -> {
-              if
-              (counts.containsKey(c)) {
-                int val = counts.get(c);
-                counts.put(c, val + 1);
-              } else {
-                counts.put(c, 1);
-              }
-            });
+      Arrays.sort(columns);
+      int maxAdjacentColumns = 0;
+      int count = 0;
+      for (int i = 0; i < columns.length - 1; i++) {
+        if (columns[i] + 1 == columns[i+1]) {
+          count++;
+        } else {
+          count = 0;
+        }
 
-    return counts.entrySet().stream().map(e -> e.getValue()).anyMatch(v -> v > 5);
+        maxAdjacentColumns = Integer.max(maxAdjacentColumns, count);
+      }
+//      System.out.println(maxAdjacentColumns);
+      return maxAdjacentColumns >= 8;
   }
 
   public static void main(String[] args) {
