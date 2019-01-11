@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class Day10 {
@@ -18,7 +19,7 @@ public class Day10 {
 
   Day10() throws Exception {
     String[] lines =
-        Files.lines(Path.of("/home/stanciua/adeventofcode2018/day10/src/test/java/input.txt"))
+        Files.lines(Path.of("src/test/java/input.txt"))
             .toArray(String[]::new);
     positions = new ArrayList<>();
     velocities = new ArrayList<>();
@@ -67,7 +68,7 @@ public class Day10 {
     int y = position.getValue1();
     int oX = origin.getValue0();
     int oY = origin.getValue1();
-    if (oX + Math.abs(x) >= grid[0].length || oY + Math.abs(y) >= grid.length) {
+    while (oX + Math.abs(x) >= grid[0].length || oY + Math.abs(y) >= grid.length) {
       reallocateGrid();
     }
     if (x >= 0 && y >= 0) {
@@ -101,7 +102,7 @@ public class Day10 {
     }
 
     positions.stream().forEach(p -> updateGridWithPosition(p));
-    for (int second = 1; second <= 3000; second++) {
+    for (int second = 1; second <= 20; second++) {
       System.out.println("second " + second);
       System.out.println(positions.get(0));
       resetGrid(grid);
@@ -114,16 +115,6 @@ public class Day10 {
         }
         for (int j = 0; j < grid.length; j++) {
           System.out.print(grid[i][j] + " ");
-          //          if (i == 25 && j == 25) {
-          //            System.out.print("X" + " ");
-          //          }
-          //          if (grid[i][j] == '#') {
-          //            Pair<Integer, Integer> xy = coord.get(new Pair(i, j));
-          //            System.out.print("(" + (xy.getValue0()) + "," + (xy.getValue1()) + ")" + "
-          // ");
-          //          } else {
-          //            System.out.print(grid[i][j] + " ");
-          //          }
         }
         System.out.println();
       }
@@ -139,8 +130,15 @@ public class Day10 {
   }
 
   boolean areColumnsNextToOneAnother() {
-      int[] columns = positions.stream().mapToInt(p -> p.getValue0()).toArray();
-      Arrays.sort(columns);
+      Map<Integer, Integer> countColumnMap = positions.stream().map(p -> p.getValue0()).collect(HashMap::new, (a, v) -> {
+        a.put(v, a.getOrDefault(v, 0) + 1);
+      }, (a, b) ->{});
+      countColumnMap.entrySet().removeIf(e -> e.getValue() < 10);
+    ArrayList<Pair<Integer, Integer>> positionsToLookAt = positions.stream().filter(p -> countColumnMap.containsKey(p.getValue0())).collect(Collectors.toCollection(ArrayList::new));
+    int[] columns = positions.stream().map(p -> p.getValue0()).collect(Collectors.toCollection(TreeSet::new)).stream().mapToInt(e -> e.intValue()).toArray();
+    int[] lines = positions.stream().map(p -> p.getValue1()).collect(Collectors.toCollection(TreeSet::new)).stream().mapToInt(e -> e.intValue()).toArray();
+    Arrays.stream(columns).forEach(e -> System.out.print(e + " "));
+    System.out.println();
       int maxAdjacentColumns = 0;
       int count = 0;
       for (int i = 0; i < columns.length - 1; i++) {
@@ -152,8 +150,7 @@ public class Day10 {
 
         maxAdjacentColumns = Integer.max(maxAdjacentColumns, count);
       }
-//      System.out.println(maxAdjacentColumns);
-      return maxAdjacentColumns >= 8;
+      return maxAdjacentColumns >= 10;
   }
 
   public static void main(String[] args) {
