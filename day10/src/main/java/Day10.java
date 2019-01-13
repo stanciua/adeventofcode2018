@@ -18,9 +18,7 @@ public class Day10 {
       Pattern.compile("position=<\\s?(.+),\\s\\s?(.+)> velocity=<\\s?(.+),\\s\\s?(.+)>");
 
   Day10() throws Exception {
-    String[] lines =
-        Files.lines(Path.of("src/test/java/input.txt"))
-            .toArray(String[]::new);
+    String[] lines = Files.lines(Path.of("src/test/java/input.txt")).toArray(String[]::new);
     positions = new ArrayList<>();
     velocities = new ArrayList<>();
     for (String line : lines) {
@@ -102,11 +100,11 @@ public class Day10 {
     }
 
     positions.stream().forEach(p -> updateGridWithPosition(p));
-    for (int second = 1; second <= 20; second++) {
+    for (int second = 1; second <= 100; second++) {
       System.out.println("second " + second);
       System.out.println(positions.get(0));
       resetGrid(grid);
-      updatePositionWithVelocity();
+      //      updatePositionWithVelocity();
       positions.stream().forEach(p -> updateGridWithPosition(p));
       for (int i = 0; i < grid.length; i++) {
         char[] line = grid[i];
@@ -130,27 +128,60 @@ public class Day10 {
   }
 
   boolean areColumnsNextToOneAnother() {
-      Map<Integer, Integer> countColumnMap = positions.stream().map(p -> p.getValue0()).collect(HashMap::new, (a, v) -> {
-        a.put(v, a.getOrDefault(v, 0) + 1);
-      }, (a, b) ->{});
-      countColumnMap.entrySet().removeIf(e -> e.getValue() < 10);
-    ArrayList<Pair<Integer, Integer>> positionsToLookAt = positions.stream().filter(p -> countColumnMap.containsKey(p.getValue0())).collect(Collectors.toCollection(ArrayList::new));
-    int[] columns = positions.stream().map(p -> p.getValue0()).collect(Collectors.toCollection(TreeSet::new)).stream().mapToInt(e -> e.intValue()).toArray();
-    int[] lines = positions.stream().map(p -> p.getValue1()).collect(Collectors.toCollection(TreeSet::new)).stream().mapToInt(e -> e.intValue()).toArray();
-    Arrays.stream(columns).forEach(e -> System.out.print(e + " "));
-    System.out.println();
-      int maxAdjacentColumns = 0;
-      int count = 0;
-      for (int i = 0; i < columns.length - 1; i++) {
-        if (columns[i] + 1 == columns[i+1]) {
-          count++;
-        } else {
-          count = 0;
-        }
-
-        maxAdjacentColumns = Integer.max(maxAdjacentColumns, count);
-      }
-      return maxAdjacentColumns >= 10;
+    Set<Pair<Integer, Integer>> positionsSet =
+        positions.stream().collect(Collectors.toCollection(TreeSet::new));
+    Map<Integer, Integer> countColumnMap =
+        positionsSet
+            .stream()
+            .map(p -> p.getValue0())
+            .collect(
+                HashMap::new,
+                (a, v) -> {
+                  a.put(v, a.getOrDefault(v, 0) + 1);
+                },
+                (a, b) -> {});
+    Optional<Map.Entry<Integer, Integer>> columns10 =
+        countColumnMap.entrySet().stream().filter(e -> e.getValue() >= 8).findFirst();
+    if (columns10.isEmpty()) {
+      return false;
+    }
+    return true;
+//    //    System.out.println("column: " + columns10.get());
+//    //    countColumnMap.entrySet().removeIf(e -> e.getValue() < 8);
+//    //    countColumnMap.entrySet().stream().forEach(p -> System.out.print(p + " "));
+//    List<Pair<Integer, Integer>> positionsToLookAt =
+//        positionsSet
+//            .stream()
+//            .filter(p -> countColumnMap.containsKey(p.getValue0()))
+//            .sorted(
+//                Comparator.comparingInt((Pair<Integer, Integer> p) -> p.getValue0())
+//                    .thenComparingInt(p -> p.getValue1()))
+//            .collect(Collectors.toCollection(TreeSet::new))
+//            .stream()
+//            .collect(Collectors.toCollection(ArrayList::new));
+////    positionsToLookAt.stream().forEach(p -> System.out.print(p + " "));
+////    System.out.println();
+//    int maxAdjacentColumns = 0;
+//    int count = 0;
+//
+//    for (int i = 0; i < positionsToLookAt.size() - 1; i++) {
+//      Pair<Integer, Integer> pi = positionsToLookAt.get(i);
+//      Pair<Integer, Integer> pip = positionsToLookAt.get(i + 1);
+//      if (pi.getValue0() == pip.getValue0() && pi.getValue1() + 1 == pip.getValue1()) {
+//        //      System.out.print(pi + " " + pip);
+//        //      System.out.println();
+//        count++;
+//                System.out.println("count: " + count + " ");
+//      } else {
+//        count = 0;
+//      }
+//
+//      maxAdjacentColumns = Integer.max(maxAdjacentColumns, count);
+//    }
+//
+//    //        System.out.print(maxAdjacentColumns + " ");
+//    //        System.out.println();
+//    return maxAdjacentColumns + 1 >= 8;
   }
 
   public static void main(String[] args) {
