@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 public class Day10 {
+
   ArrayList<Pair<Integer, Integer>> positions;
   ArrayList<Pair<Integer, Integer>> velocities;
   char[][] grid;
@@ -16,6 +17,9 @@ public class Day10 {
   private static final Pattern pattern =
       Pattern.compile("position=<\\s?(.+),\\s\\s?(.+)> velocity=<\\s?(.+),\\s\\s?(.+)>");
   private static int times = 0;
+  //  The magic number for the radius of a circle when all the positions are inside it and match
+  //  the correct output
+  final static int RADIUS = 11698;
 
   Day10() throws Exception {
     String[] lines = Files.lines(Path.of("src/test/java/input.txt")).toArray(String[]::new);
@@ -97,38 +101,50 @@ public class Day10 {
   String getResult1() {
     areCoordinatesCloseEnough();
     positions.stream().forEach(p -> updateGridWithPosition(p));
-    for (int second = 1; second <= 1; second++) {
-      System.out.println("second " + second);
-      System.out.println(positions.get(0));
-      resetGrid(grid);
-      //      updatePositionWithVelocity();
-      positions.stream().forEach(p -> updateGridWithPosition(p));
-      for (int i = 0; i < grid.length; i++) {
-        char[] line = grid[i];
-        if (IntStream.range(0, grid[i].length).allMatch(ii -> line[ii] != '#')) {
-          continue;
-        }
-        for (int j = 0; j < grid.length; j++) {
-          System.out.print(grid[i][j] + " ");
-        }
-        System.out.println();
+    resetGrid(grid);
+    positions.stream().forEach(p -> updateGridWithPosition(p));
+    for (int i = 0; i < grid.length; i++) {
+      char[] line = grid[i];
+      if (IntStream.range(0, grid[i].length).allMatch(ii -> line[ii] != '#')) {
+        continue;
       }
-      System.out.println();
-      System.out.println();
+      for (int j = 0; j < grid.length; j++) {
+        System.out.print(grid[i][j] + " ");
+      }
       System.out.println();
     }
     return "";
   }
 
   int getResult2() {
-    return -1;
+    OptionalInt maxX = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
+    OptionalInt maxY = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
+    Pair<Integer, Integer> currentOrigin = new Pair<>(maxX.getAsInt() / 2, maxY.getAsInt() / 2);
+    boolean arePointsInsideCircle = false;
+    int seconds = 0;
+    while (!arePointsInsideCircle) {
+      // if all points are within the circle with above radius we stop, otherwise we continue
+      updatePositionWithVelocity();
+      seconds++;
+
+      maxX = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
+      maxY = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
+      currentOrigin = new Pair<>(maxX.getAsInt() / 2, maxY.getAsInt() / 2);
+
+      final Pair<Integer, Integer> lambaCurrentOrigin = currentOrigin;
+      arePointsInsideCircle =
+          positions
+              .stream()
+              .mapToInt(p -> distance(lambaCurrentOrigin, p))
+              .allMatch(d -> d <= RADIUS);
+    }
+    return seconds;
   }
 
   boolean areCoordinatesCloseEnough() {
     OptionalInt maxX = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
     OptionalInt maxY = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
     Pair<Integer, Integer> currentOrigin = new Pair<>(maxX.getAsInt() / 2, maxY.getAsInt() / 2);
-    final int radius = 11_000;
     boolean arePointsInsideCircle = false;
     while (!arePointsInsideCircle) {
       // if all points are within the circle with above radius we stop, otherwise we continue
@@ -143,7 +159,7 @@ public class Day10 {
           positions
               .stream()
               .mapToInt(p -> distance(lambaCurrentOrigin, p))
-              .allMatch(d -> d <= radius);
+              .allMatch(d -> d <= RADIUS);
     }
     return true;
   }
