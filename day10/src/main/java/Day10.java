@@ -5,7 +5,6 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class Day10 {
@@ -16,6 +15,7 @@ public class Day10 {
   Map<Pair<Integer, Integer>, Pair<Integer, Integer>> coord;
   private static final Pattern pattern =
       Pattern.compile("position=<\\s?(.+),\\s\\s?(.+)> velocity=<\\s?(.+),\\s\\s?(.+)>");
+  private static int times = 0;
 
   Day10() throws Exception {
     String[] lines = Files.lines(Path.of("src/test/java/input.txt")).toArray(String[]::new);
@@ -95,12 +95,9 @@ public class Day10 {
   }
 
   String getResult1() {
-    while (!areColumnsNextToOneAnother()) {
-      updatePositionWithVelocity();
-    }
-
+    areCoordinatesCloseEnough();
     positions.stream().forEach(p -> updateGridWithPosition(p));
-    for (int second = 1; second <= 100; second++) {
+    for (int second = 1; second <= 1; second++) {
       System.out.println("second " + second);
       System.out.println(positions.get(0));
       resetGrid(grid);
@@ -127,61 +124,33 @@ public class Day10 {
     return -1;
   }
 
-  boolean areColumnsNextToOneAnother() {
-    Set<Pair<Integer, Integer>> positionsSet =
-        positions.stream().collect(Collectors.toCollection(TreeSet::new));
-    Map<Integer, Integer> countColumnMap =
-        positionsSet
-            .stream()
-            .map(p -> p.getValue0())
-            .collect(
-                HashMap::new,
-                (a, v) -> {
-                  a.put(v, a.getOrDefault(v, 0) + 1);
-                },
-                (a, b) -> {});
-    Optional<Map.Entry<Integer, Integer>> columns10 =
-        countColumnMap.entrySet().stream().filter(e -> e.getValue() >= 8).findFirst();
-    if (columns10.isEmpty()) {
-      return false;
+  boolean areCoordinatesCloseEnough() {
+    OptionalInt maxX = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
+    OptionalInt maxY = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
+    Pair<Integer, Integer> currentOrigin = new Pair<>(maxX.getAsInt() / 2, maxY.getAsInt() / 2);
+    final int radius = 11_000;
+    boolean arePointsInsideCircle = false;
+    while (!arePointsInsideCircle) {
+      // if all points are within the circle with above radius we stop, otherwise we continue
+      updatePositionWithVelocity();
+
+      maxX = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
+      maxY = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
+      currentOrigin = new Pair<>(maxX.getAsInt() / 2, maxY.getAsInt() / 2);
+
+      final Pair<Integer, Integer> lambaCurrentOrigin = currentOrigin;
+      arePointsInsideCircle =
+          positions
+              .stream()
+              .mapToInt(p -> distance(lambaCurrentOrigin, p))
+              .allMatch(d -> d <= radius);
     }
     return true;
-//    //    System.out.println("column: " + columns10.get());
-//    //    countColumnMap.entrySet().removeIf(e -> e.getValue() < 8);
-//    //    countColumnMap.entrySet().stream().forEach(p -> System.out.print(p + " "));
-//    List<Pair<Integer, Integer>> positionsToLookAt =
-//        positionsSet
-//            .stream()
-//            .filter(p -> countColumnMap.containsKey(p.getValue0()))
-//            .sorted(
-//                Comparator.comparingInt((Pair<Integer, Integer> p) -> p.getValue0())
-//                    .thenComparingInt(p -> p.getValue1()))
-//            .collect(Collectors.toCollection(TreeSet::new))
-//            .stream()
-//            .collect(Collectors.toCollection(ArrayList::new));
-////    positionsToLookAt.stream().forEach(p -> System.out.print(p + " "));
-////    System.out.println();
-//    int maxAdjacentColumns = 0;
-//    int count = 0;
-//
-//    for (int i = 0; i < positionsToLookAt.size() - 1; i++) {
-//      Pair<Integer, Integer> pi = positionsToLookAt.get(i);
-//      Pair<Integer, Integer> pip = positionsToLookAt.get(i + 1);
-//      if (pi.getValue0() == pip.getValue0() && pi.getValue1() + 1 == pip.getValue1()) {
-//        //      System.out.print(pi + " " + pip);
-//        //      System.out.println();
-//        count++;
-//                System.out.println("count: " + count + " ");
-//      } else {
-//        count = 0;
-//      }
-//
-//      maxAdjacentColumns = Integer.max(maxAdjacentColumns, count);
-//    }
-//
-//    //        System.out.print(maxAdjacentColumns + " ");
-//    //        System.out.println();
-//    return maxAdjacentColumns + 1 >= 8;
+  }
+
+  private int distance(Pair<Integer, Integer> from, Pair<Integer, Integer> to) {
+    return (from.getValue0() - to.getValue0()) * (from.getValue0() - to.getValue0())
+        + (from.getValue1() - to.getValue1()) * (from.getValue1() - to.getValue1());
   }
 
   public static void main(String[] args) {
