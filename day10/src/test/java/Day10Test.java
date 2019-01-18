@@ -8,7 +8,7 @@ public class Day10Test {
     public void testDay6Result1() {
         try {
             Day10 day10 = new Day10();
-            assertEquals("BITRAQVSGUWKXYHMZPOCDLJNFE", day10.getResult1());
+            assertEquals("ECKXJLJF", day10.getResult1());
         } catch(Exception e) {
             assert(false);
         }

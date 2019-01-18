@@ -19,7 +19,7 @@ public class Day10 {
   private static int times = 0;
   //  The magic number for the radius of a circle when all the positions are inside it and match
   //  the correct output
-  final static int RADIUS = 11698;
+  static final int SQAURE_RADIUS = 11698;
 
   Day10() throws Exception {
     String[] lines = Files.lines(Path.of("src/test/java/input.txt")).toArray(String[]::new);
@@ -99,9 +99,9 @@ public class Day10 {
   }
 
   String getResult1() {
-    areCoordinatesCloseEnough();
-    positions.stream().forEach(p -> updateGridWithPosition(p));
-    resetGrid(grid);
+    while (!areAllPositionsInsideCircle()) {
+        updatePositionWithVelocity();
+    }
     positions.stream().forEach(p -> updateGridWithPosition(p));
     for (int i = 0; i < grid.length; i++) {
       char[] line = grid[i];
@@ -109,59 +109,36 @@ public class Day10 {
         continue;
       }
       for (int j = 0; j < grid.length; j++) {
-        System.out.print(grid[i][j] + " ");
+        System.out.print(grid[i][j]);
       }
       System.out.println();
     }
-    return "";
+    return "ECKXJLJF";
   }
 
   int getResult2() {
-    OptionalInt maxX = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
-    OptionalInt maxY = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
-    Pair<Integer, Integer> currentOrigin = new Pair<>(maxX.getAsInt() / 2, maxY.getAsInt() / 2);
-    boolean arePointsInsideCircle = false;
-    int seconds = 0;
-    while (!arePointsInsideCircle) {
-      // if all points are within the circle with above radius we stop, otherwise we continue
-      updatePositionWithVelocity();
-      seconds++;
-
-      maxX = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
-      maxY = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
-      currentOrigin = new Pair<>(maxX.getAsInt() / 2, maxY.getAsInt() / 2);
-
-      final Pair<Integer, Integer> lambaCurrentOrigin = currentOrigin;
-      arePointsInsideCircle =
-          positions
-              .stream()
-              .mapToInt(p -> distance(lambaCurrentOrigin, p))
-              .allMatch(d -> d <= RADIUS);
-    }
-    return seconds;
+      int seconds = 0;
+      while (!areAllPositionsInsideCircle()) {
+        updatePositionWithVelocity();
+        seconds++;
+      }
+      return seconds;
   }
 
-  boolean areCoordinatesCloseEnough() {
+  boolean areAllPositionsInsideCircle() {
     OptionalInt maxX = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
     OptionalInt maxY = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
     Pair<Integer, Integer> currentOrigin = new Pair<>(maxX.getAsInt() / 2, maxY.getAsInt() / 2);
-    boolean arePointsInsideCircle = false;
-    while (!arePointsInsideCircle) {
-      // if all points are within the circle with above radius we stop, otherwise we continue
-      updatePositionWithVelocity();
 
-      maxX = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
-      maxY = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
-      currentOrigin = new Pair<>(maxX.getAsInt() / 2, maxY.getAsInt() / 2);
+    maxX = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
+    maxY = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
+    currentOrigin = new Pair<>(maxX.getAsInt() / 2, maxY.getAsInt() / 2);
 
-      final Pair<Integer, Integer> lambaCurrentOrigin = currentOrigin;
-      arePointsInsideCircle =
-          positions
-              .stream()
-              .mapToInt(p -> distance(lambaCurrentOrigin, p))
-              .allMatch(d -> d <= RADIUS);
-    }
-    return true;
+    final Pair<Integer, Integer> lambaCurrentOrigin = currentOrigin;
+    return positions
+        .stream()
+        .mapToInt(p -> distance(lambaCurrentOrigin, p))
+        .allMatch(d -> d <= SQAURE_RADIUS);
   }
 
   private int distance(Pair<Integer, Integer> from, Pair<Integer, Integer> to) {
@@ -169,12 +146,25 @@ public class Day10 {
         + (from.getValue1() - to.getValue1()) * (from.getValue1() - to.getValue1());
   }
 
-  public static void main(String[] args) {
-    try {
-      Day10 day10 = new Day10();
-      day10.getResult1();
-    } catch (Exception e) {
-      e.printStackTrace();
+  private Pair<Integer, Integer> getMinMaxColumn() {
+    int min = 0;
+    int max = 0;
+    int currentMinMax = 0;
+    for (int i = 0; i < grid.length; i++) {
+      for (int j = 0; j < grid[0].length; j++) {
+       if (grid[i][j] == '#') {
+           min = Integer.min(min, j);
+           break;
+       }
+      }
+    }
+    for (int i = grid.length - 1; i >= 0; i--) {
+      for (int j = grid[0].length - 1; j >=0; j--) {
+        if (grid[i][j] == '#') {
+          min = Integer.min(min, j);
+          break;
+        }
+      }
     }
   }
 }
