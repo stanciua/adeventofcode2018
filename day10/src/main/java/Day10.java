@@ -1,25 +1,23 @@
-import org.javatuples.Pair;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.OptionalInt;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
+import org.javatuples.Pair;
 
-public class Day10 {
+class Day10 {
 
-  ArrayList<Pair<Integer, Integer>> positions;
-  ArrayList<Pair<Integer, Integer>> velocities;
-  char[][] grid;
-  Pair<Integer, Integer> origin;
-  Map<Pair<Integer, Integer>, Pair<Integer, Integer>> coord;
+  private ArrayList<Pair<Integer, Integer>> positions;
+  private ArrayList<Pair<Integer, Integer>> velocities;
+  private char[][] grid;
+  private Pair<Integer, Integer> origin;
   private static final Pattern pattern =
       Pattern.compile("position=<\\s?(.+),\\s\\s?(.+)> velocity=<\\s?(.+),\\s\\s?(.+)>");
-  private static int times = 0;
   //  The magic number for the radius of a circle when all the positions are inside it and match
   //  the correct output
-  static final int SQAURE_RADIUS = 11698;
+  private static final int SQUARE_RADIUS = 11698;
 
   Day10() throws Exception {
     String[] lines = Files.lines(Path.of("src/test/java/input.txt")).toArray(String[]::new);
@@ -36,10 +34,9 @@ public class Day10 {
     grid = new char[128][128];
     origin = new Pair<>(grid.length / 2, grid[0].length / 2);
     resetGrid(grid);
-    coord = new HashMap<>();
   }
 
-  void resetGrid(char[][] grid) {
+  private void resetGrid(char[][] grid) {
     for (int i = 0; i < grid.length; i++) {
       for (int j = 0; j < grid[0].length; j++) {
         grid[i][j] = '.';
@@ -47,44 +44,39 @@ public class Day10 {
     }
   }
 
-  void reallocateGrid() {
+  private void reallocateGrid() {
     char[][] newGrid = new char[grid.length * 2][grid[0].length * 2];
     resetGrid(newGrid);
-    Arrays.copyOfRange(grid, 0, grid.length);
-    Pair<Integer, Integer> oldOrigin = origin;
     int m = grid.length;
     int n = grid[0].length;
-    for (int i = newGrid.length - m; i < newGrid.length; i++) {
-      for (int j = newGrid[0].length - n; j < newGrid[0].length; j++) {
-        newGrid[i][j] = grid[i - m][j - n];
-      }
-    }
+    IntStream.range(m, newGrid.length)
+        .forEach(i -> System.arraycopy(grid[i - m], 0, newGrid[i], n, n));
     grid = newGrid;
     origin = new Pair<>(grid.length / 2, grid[0].length / 2);
   }
 
-  void updateGridWithPosition(Pair<Integer, Integer> position) {
+  private void updateGridWithPosition(Pair<Integer, Integer> position) {
     // x - columns
     // y - lines
     int x = position.getValue0();
     int y = position.getValue1();
-    int oX = origin.getValue0();
-    int oY = origin.getValue1();
-    while (oX + Math.abs(x) >= grid[0].length || oY + Math.abs(y) >= grid.length) {
+    int ox = origin.getValue0();
+    int oy = origin.getValue1();
+    while (ox + Math.abs(x) >= grid[0].length || oy + Math.abs(y) >= grid.length) {
       reallocateGrid();
     }
     if (x >= 0 && y >= 0) {
-      grid[oY + y][oX + x] = '#';
-    } else if (x >= 0 && y <= 0) {
-      grid[oY - Math.abs(y)][oX + x] = '#';
-    } else if (x <= 0 && y >= 0) {
-      grid[oY + y][oX - Math.abs(x)] = '#';
+      grid[oy + y][ox + x] = '#';
+    } else if (x >= 0) {
+      grid[oy - Math.abs(y)][ox + x] = '#';
+    } else if (y >= 0) {
+      grid[oy + y][ox - Math.abs(x)] = '#';
     } else {
-      grid[oY - Math.abs(y)][oX - Math.abs(x)] = '#';
+      grid[oy - Math.abs(y)][ox - Math.abs(x)] = '#';
     }
   }
 
-  void updatePositionWithVelocity() {
+  private void updatePositionWithVelocity() {
     IntStream.range(0, positions.size())
         .forEach(
             i -> {
@@ -99,46 +91,45 @@ public class Day10 {
   }
 
   String getResult1() {
-    while (!areAllPositionsInsideCircle()) {
-        updatePositionWithVelocity();
+    while (coordinatesNotInsideCircle()) {
+      updatePositionWithVelocity();
     }
-    positions.stream().forEach(p -> updateGridWithPosition(p));
-    for (int i = 0; i < grid.length; i++) {
-      char[] line = grid[i];
-      if (IntStream.range(0, grid[i].length).allMatch(ii -> line[ii] != '#')) {
+    positions.forEach(this::updateGridWithPosition);
+    Pair<Integer, Integer> minMaxColumn = getMinMaxColumn();
+    StringBuilder output = new StringBuilder();
+    for (char[] line : grid) {
+      if (IntStream.range(0, line.length).allMatch(ii -> line[ii] != '#')) {
         continue;
       }
-      for (int j = 0; j < grid.length; j++) {
-        System.out.print(grid[i][j]);
+      for (int j = minMaxColumn.getValue0(); j <= minMaxColumn.getValue1(); j++) {
+        output.append(line[j]);
       }
-      System.out.println();
+      output.append('\n');
     }
-    return "ECKXJLJF";
+    return output.toString();
   }
 
   int getResult2() {
-      int seconds = 0;
-      while (!areAllPositionsInsideCircle()) {
-        updatePositionWithVelocity();
-        seconds++;
-      }
-      return seconds;
+    int seconds = 0;
+    while (coordinatesNotInsideCircle()) {
+      updatePositionWithVelocity();
+      seconds++;
+    }
+    return seconds;
   }
 
-  boolean areAllPositionsInsideCircle() {
+  private boolean coordinatesNotInsideCircle() {
     OptionalInt maxX = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
-    OptionalInt maxY = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
-    Pair<Integer, Integer> currentOrigin = new Pair<>(maxX.getAsInt() / 2, maxY.getAsInt() / 2);
-
-    maxX = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
-    maxY = positions.stream().mapToInt(p -> Math.abs(p.getValue0())).max();
-    currentOrigin = new Pair<>(maxX.getAsInt() / 2, maxY.getAsInt() / 2);
-
-    final Pair<Integer, Integer> lambaCurrentOrigin = currentOrigin;
-    return positions
+    OptionalInt maxY = positions.stream().mapToInt(p -> Math.abs(p.getValue1())).max();
+    int max = 0;
+    if (maxX.isPresent()) {
+      max = Integer.max(maxX.getAsInt(), maxY.getAsInt());
+    }
+    final Pair<Integer, Integer> currentOrigin = new Pair<>(max / 2, max / 2);
+    return !positions
         .stream()
-        .mapToInt(p -> distance(lambaCurrentOrigin, p))
-        .allMatch(d -> d <= SQAURE_RADIUS);
+        .mapToInt(p -> distance(currentOrigin, p))
+        .allMatch(d -> d <= SQUARE_RADIUS);
   }
 
   private int distance(Pair<Integer, Integer> from, Pair<Integer, Integer> to) {
@@ -147,24 +138,24 @@ public class Day10 {
   }
 
   private Pair<Integer, Integer> getMinMaxColumn() {
-    int min = 0;
+    int min = Integer.MAX_VALUE;
     int max = 0;
-    int currentMinMax = 0;
-    for (int i = 0; i < grid.length; i++) {
-      for (int j = 0; j < grid[0].length; j++) {
-       if (grid[i][j] == '#') {
-           min = Integer.min(min, j);
-           break;
-       }
-      }
-    }
-    for (int i = grid.length - 1; i >= 0; i--) {
-      for (int j = grid[0].length - 1; j >=0; j--) {
-        if (grid[i][j] == '#') {
+    for (char[] line : grid) {
+      for (int j = 0; j < line.length; j++) {
+        if (line[j] == '#') {
           min = Integer.min(min, j);
           break;
         }
       }
     }
+    for (int i = grid.length - 1; i >= 0; i--) {
+      for (int j = grid[0].length - 1; j >= 0; j--) {
+        if (grid[i][j] == '#') {
+          max = Integer.max(max, j);
+          break;
+        }
+      }
+    }
+    return new Pair<>(min, max);
   }
 }
