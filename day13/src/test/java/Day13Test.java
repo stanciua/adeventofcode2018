@@ -9,7 +9,7 @@ public class Day13Test {
   public void testDay6Result1() {
     try {
       Day13 day13 = new Day13();
-      assertEquals(new Pair<>(7, 3), day13.getResult1());
+      assertEquals(new Pair<>(143, 43), day13.getResult1());
     } catch (Exception e) {
       assert (false);
     }
