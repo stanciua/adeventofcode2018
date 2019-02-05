@@ -58,6 +58,9 @@ class Day13 {
   }
 
   boolean moveKartsUntilCollision() {
+    Set<Pair<Integer, Integer>> positions = karts.stream().map(k -> k.getPosition()).collect(
+        Collectors.toCollection(TreeSet::new));
+    System.out.println("-----------------------------");
     for (Kart kart : karts) {
       int i = kart.getPosition().getValue0();
       int j = kart.getPosition().getValue1();
@@ -127,14 +130,20 @@ class Day13 {
         kart.currentSymbol = nextSymbol;
         track[i + 1][j] = getKartSymbolForDirection(kart.direction);
       }
+      if (positions.contains(kart.getPosition())) {
+        karts.removeIf(k -> k.getPosition() != kart.getPosition());
+        System.out.println(karts);
+        return true;
+      } else {
+        positions.add(kart.getPosition());
+      }
     }
-    Set<Pair<Integer, Integer>> positions = karts.stream().map(k -> k.getPosition()).collect(Collectors.toCollection(TreeSet::new));
-    if (positions.stream().filter(p -> Collections.frequency(positions, p) > 1).
     return false;
   }
 
-  int getResult1() {
+  Pair<Integer, Integer> getResult1() {
     updateInitialKartPositions();
+    Pair<Integer, Integer> collisionPosition = new Pair<>(0, 0);
     while (!moveKartsUntilCollision()) {
       for (char[] line : track) {
         for (char c : line) {
@@ -143,8 +152,13 @@ class Day13 {
         System.out.println();
       }
       System.out.println(karts);
+      continue;
     }
-    return -1;
+    collisionPosition = karts.iterator().next().getPosition();
+    Integer x = collisionPosition.getValue0();
+    Integer y = collisionPosition.getValue1();
+    collisionPosition = collisionPosition.setAt0(y).setAt1(x);
+    return collisionPosition;
   }
 
   long getResult2() {
