@@ -58,104 +58,158 @@ class Day13 {
     return symbol;
   }
 
-  boolean moveKartsUntilCollision() {
-    Set<Pair<Integer, Integer>> positions = karts.stream().map(k -> k.getPosition()).collect(
-        Collectors.toCollection(TreeSet::new));
-   
-    karts.sort(Comparator.comparing(Kart::getPosition));
-    for (Kart kart : karts) {
-      int i = kart.getPosition().getValue0();
-      int j = kart.getPosition().getValue1();
-      if (kart.direction == Direction.RIGHT) {
-        char nextSymbol = track[i][j + 1];
-        if (nextSymbol == '-') {
-          kart.direction = Direction.RIGHT;
-        } else if (nextSymbol == '\\') {
-          kart.direction = Direction.DOWN;
-        } else if (nextSymbol == '/') {
-          kart.direction = Direction.UP;
-        } else if (nextSymbol == '+') {
-          kart.direction = kart.getDirectionForTurn(kart.getTurn());
-          kart.nextTurn();
+  Pair<Integer, Integer> moveKarts(boolean firstCollision) {
+    Pair<Integer, Integer> position;
+    long tick = 0;
+    outer:
+    do {
+      karts.sort(Comparator.comparing(Kart::getPosition));
+      List<Kart> toBeRemovedKarts = new ArrayList<>();
+//      System.out.println("------------------------------------------------");
+      for (Kart kart : karts) {
+//        System.out.println(kart.getPosition());
+        if (toBeRemovedKarts.contains(kart)) {
+          continue;
         }
-        kart.setPosition(new Pair<>(i, j + 1));
-        track[i][j] = kart.currentSymbol;
-        kart.currentSymbol = nextSymbol;
-        track[i][j + 1] = getKartSymbolForDirection(kart.direction);
-      } else if (kart.direction == Direction.LEFT) {
-        char nextSymbol = track[i][j - 1];
-        if (nextSymbol == '-') {
-          kart.direction = Direction.LEFT;
-        } else if (nextSymbol == '\\') {
-          kart.direction = Direction.UP;
-        } else if (nextSymbol == '/') {
-          kart.direction = Direction.DOWN;
-        } else if (nextSymbol == '+') {
-          kart.direction = kart.getDirectionForTurn(kart.getTurn());
-          kart.nextTurn();
+        int i = kart.getPosition().getValue0();
+        int j = kart.getPosition().getValue1();
+        if (i == 73 && j == 26) {
+//          for (char[] l : track) {
+//            for (char c : l) {
+//              System.out.print(c);
+//            }
+//            System.out.println();
+//          }
+
         }
-        kart.setPosition(new Pair<>(i, j - 1));
-        track[i][j] = kart.currentSymbol;
-        kart.currentSymbol = nextSymbol;
-        track[i][j - 1] = getKartSymbolForDirection(kart.direction);
-      } else if (kart.direction == Direction.UP) {
-        char nextSymbol = track[i - 1][j];
-        if (nextSymbol == '|') {
-          kart.direction = Direction.UP;
-        } else if (nextSymbol == '\\') {
-          kart.direction = Direction.LEFT;
-        } else if (nextSymbol == '/') {
-          kart.direction = Direction.RIGHT;
-        } else if (nextSymbol == '+') {
-          kart.direction = kart.getDirectionForTurn(kart.getTurn());
-          kart.nextTurn();
+//        System.out.println("Coordinate { x: " + kart.getPosition().getValue1() + ", y: " + kart.getPosition().getValue0() + " }");
+        if (kart.direction == Direction.RIGHT) {
+          char nextSymbol = track[i][j + 1];
+          if (nextSymbol == '-') {
+            kart.direction = Direction.RIGHT;
+          } else if (nextSymbol == '\\') {
+            kart.direction = Direction.DOWN;
+          } else if (nextSymbol == '/') {
+            kart.direction = Direction.UP;
+          } else if (nextSymbol == '+') {
+            kart.direction = kart.getDirectionForTurn(kart.getTurn());
+            kart.nextTurn();
+          }
+          kart.setPosition(new Pair<>(i, j + 1));
+          track[i][j] = kart.currentSymbol;
+          if (nextSymbol != 'v' && nextSymbol != '^' && nextSymbol != '<' && nextSymbol != '>') {
+            kart.currentSymbol = nextSymbol;
+          }
+          track[i][j + 1] = getKartSymbolForDirection(kart.direction);
+        } else if (kart.direction == Direction.LEFT) {
+          char nextSymbol = track[i][j - 1];
+          if (nextSymbol == '-') {
+            kart.direction = Direction.LEFT;
+          } else if (nextSymbol == '\\') {
+            kart.direction = Direction.UP;
+          } else if (nextSymbol == '/') {
+            kart.direction = Direction.DOWN;
+          } else if (nextSymbol == '+') {
+            kart.direction = kart.getDirectionForTurn(kart.getTurn());
+            kart.nextTurn();
+          }
+          kart.setPosition(new Pair<>(i, j - 1));
+          track[i][j] = kart.currentSymbol;
+          if (nextSymbol != 'v' && nextSymbol != '^' && nextSymbol != '<' && nextSymbol != '>') {
+            kart.currentSymbol = nextSymbol;
+          }
+          track[i][j - 1] = getKartSymbolForDirection(kart.direction);
+        } else if (kart.direction == Direction.UP) {
+          char nextSymbol = track[i - 1][j];
+          if (nextSymbol == '|') {
+            kart.direction = Direction.UP;
+          } else if (nextSymbol == '\\') {
+            kart.direction = Direction.LEFT;
+          } else if (nextSymbol == '/') {
+            kart.direction = Direction.RIGHT;
+          } else if (nextSymbol == '+') {
+            kart.direction = kart.getDirectionForTurn(kart.getTurn());
+            kart.nextTurn();
+          }
+          kart.setPosition(new Pair<>(i - 1, j));
+          track[i][j] = kart.currentSymbol;
+          if (nextSymbol != 'v' && nextSymbol != '^' && nextSymbol != '<' && nextSymbol != '>') {
+            kart.currentSymbol = nextSymbol;
+          }
+          track[i - 1][j] = getKartSymbolForDirection(kart.direction);
+        } else {
+          char nextSymbol = track[i + 1][j];
+          if (nextSymbol == '|') {
+            kart.direction = Direction.DOWN;
+          } else if (nextSymbol == '\\') {
+            kart.direction = Direction.RIGHT;
+          } else if (nextSymbol == '/') {
+            kart.direction = Direction.LEFT;
+          } else if (nextSymbol == '+') {
+            kart.direction = kart.getDirectionForTurn(kart.getTurn());
+            kart.nextTurn();
+          }
+          kart.setPosition(new Pair<>(i + 1, j));
+          track[i][j] = kart.currentSymbol;
+          if (nextSymbol != 'v' && nextSymbol != '^' && nextSymbol != '<' && nextSymbol != '>') {
+            kart.currentSymbol = nextSymbol;
+          }
+          track[i + 1][j] = getKartSymbolForDirection(kart.direction);
         }
-        kart.setPosition(new Pair<>(i - 1, j));
-        track[i][j] = kart.currentSymbol;
-        kart.currentSymbol = nextSymbol;
-        track[i - 1][j] = getKartSymbolForDirection(kart.direction);
-      } else {
-        char nextSymbol = track[i + 1][j];
-        if (nextSymbol == '|') {
-          kart.direction = Direction.DOWN;
-        } else if (nextSymbol == '\\') {
-          kart.direction = Direction.RIGHT;
-        } else if (nextSymbol == '/') {
-          kart.direction = Direction.LEFT;
-        } else if (nextSymbol == '+') {
-          kart.direction = kart.getDirectionForTurn(kart.getTurn());
-          kart.nextTurn();
+        List<Kart> collisionKarts = karts.stream()
+            .filter(k -> k.getPosition().equals(kart.getPosition()))
+            .collect(Collectors.toCollection(ArrayList::new));
+        if (collisionKarts.size() == 2) {
+//          System.out.println("CRASH Coordinate { x: " + kart.getPosition().getValue1() + ", y: " + kart.getPosition().getValue0() + " }");
+          position = kart.getPosition();
+          int x = position.getValue0();
+          int y = position.getValue1();
+          System.out.println(y + ", " + x);
+          Optional<Kart> previousKart = karts.stream().filter(k -> k.getPosition().equals(kart.getPosition())).skip(1).findFirst();
+          if (previousKart.isPresent()) {
+            track[x][y] = previousKart.get().getCurrentSymbol();
+          }else {
+            System.out.println("-----------------FAULT-------------------");
+            track[x][y] = kart.getCurrentSymbol();
+          }
+          if (firstCollision) {
+            break outer;
+          }
+          toBeRemovedKarts.addAll(collisionKarts);
         }
-        kart.setPosition(new Pair<>(i + 1, j));
-        track[i][j] = kart.currentSymbol;
-        kart.currentSymbol = nextSymbol;
-        track[i + 1][j] = getKartSymbolForDirection(kart.direction);
       }
-      if (positions.contains(kart.getPosition())) {
-        karts.removeIf(k -> k.getPosition() != kart.getPosition());
-        return true;
-      } else {
-        positions.add(kart.getPosition());
+      karts.removeAll(toBeRemovedKarts);
+      if (karts.size() == 1) {
+        return karts.get(0).getPosition();
       }
-    }
-    return false;
+      tick++;
+    } while (true);
+    return position;
   }
 
   Pair<Integer, Integer> getResult1() {
     updateInitialKartPositions();
-    while (!moveKartsUntilCollision()) {
-      continue;
-    }
-    Pair<Integer, Integer> collisionPosition = karts.iterator().next()
-        .getPosition();
+    Pair<Integer, Integer> collisionPosition = moveKarts(true);
     Integer x = collisionPosition.getValue0();
     Integer y = collisionPosition.getValue1();
     collisionPosition = collisionPosition.setAt0(y).setAt1(x);
     return collisionPosition;
   }
 
-  long getResult2() {
-    return -1;
+  Pair<Integer, Integer> getResult2() {
+    updateInitialKartPositions();
+    moveKarts(false);
+//    for (char[] l: track) {
+//      for (char c: l) {
+//        System.out.print(c);
+//      }
+//      System.out.println();
+//    }
+    Pair<Integer, Integer> lastKartPosition = karts.get(0).getPosition();
+    Integer x = lastKartPosition.getValue0();
+    Integer y = lastKartPosition.getValue1();
+    lastKartPosition = lastKartPosition.setAt0(y).setAt1(x);
+    return lastKartPosition;
   }
 
   static class Kart implements Comparable<Kart> {
