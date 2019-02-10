@@ -1,45 +1,47 @@
-import org.javatuples.Pair;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import org.javatuples.Pair;
 
 class Day13 {
 
   private char[][] track;
-  private List<Kart> karts;
+  private List<Cart> carts;
 
   Day13() throws Exception {
     String[] lines = Files.lines(Path.of("src/test/java/input.txt")).toArray(String[]::new);
     track = new char[lines.length][];
-    karts = new ArrayList<>();
+    carts = new ArrayList<>();
     IntStream.range(0, lines.length).forEach(i -> track[i] = lines[i].toCharArray());
   }
 
-  private void updateInitialKartPositions() {
+  private void updateInitialCartsPositions() {
     for (int i = 0; i < track.length; i++) {
       for (int j = 0; j < track[0].length; j++) {
         if (track[i][j] == '>') {
-          Kart kart = new Kart(new Pair<>(i, j), '-', Direction.RIGHT, Turn.LEFT);
-          karts.add(kart);
+          Cart cart = new Cart(new Pair<>(i, j), '-', Direction.RIGHT);
+          carts.add(cart);
         } else if (track[i][j] == '<') {
-          Kart kart = new Kart(new Pair<>(i, j), '-', Direction.LEFT, Turn.LEFT);
-          karts.add(kart);
+          Cart cart = new Cart(new Pair<>(i, j), '-', Direction.LEFT);
+          carts.add(cart);
         } else if (track[i][j] == 'v') {
-          Kart kart = new Kart(new Pair<>(i, j), '|', Direction.DOWN, Turn.LEFT);
-          karts.add(kart);
+          Cart cart = new Cart(new Pair<>(i, j), '|', Direction.DOWN);
+          carts.add(cart);
         } else if (track[i][j] == '^') {
-          Kart kart = new Kart(new Pair<>(i, j), '|', Direction.UP, Turn.LEFT);
-          karts.add(kart);
+          Cart cart = new Cart(new Pair<>(i, j), '|', Direction.UP);
+          carts.add(cart);
         }
       }
     }
   }
 
-  static char getKartSymbolForDirection(Direction direction) {
-    char symbol = ' ';
+  private static char getKartSymbolForDirection(Direction direction) {
+    char symbol;
     switch (direction) {
       case UP:
         symbol = '^';
@@ -53,208 +55,164 @@ class Day13 {
       case RIGHT:
         symbol = '>';
         break;
+      default:
+        throw new UnsupportedOperationException("Invalid direction value");
     }
 
     return symbol;
   }
 
-  Pair<Integer, Integer> moveKarts(boolean firstCollision) {
+  private Pair<Integer, Integer> findCollision(boolean firstCollision) {
     Pair<Integer, Integer> position;
-    long tick = 0;
     outer:
     do {
-      karts.sort(Comparator.comparing(Kart::getPosition));
-      List<Kart> toBeRemovedKarts = new ArrayList<>();
-//      System.out.println("------------------------------------------------");
-      for (Kart kart : karts) {
-//        System.out.println(kart.getPosition());
-        if (toBeRemovedKarts.contains(kart)) {
+      carts.sort(Comparator.comparing(Cart::getPosition));
+      List<Cart> crashedCarts = new ArrayList<>();
+      for (Cart cart : carts) {
+        if (crashedCarts.contains(cart)) {
           continue;
         }
-        int i = kart.getPosition().getValue0();
-        int j = kart.getPosition().getValue1();
-        if (i == 73 && j == 26) {
-//          for (char[] l : track) {
-//            for (char c : l) {
-//              System.out.print(c);
-//            }
-//            System.out.println();
-//          }
-
-        }
-//        System.out.println("Coordinate { x: " + kart.getPosition().getValue1() + ", y: " + kart.getPosition().getValue0() + " }");
-        if (kart.direction == Direction.RIGHT) {
-          char nextSymbol = track[i][j + 1];
-          if (nextSymbol == '-') {
-            kart.direction = Direction.RIGHT;
-          } else if (nextSymbol == '\\') {
-            kart.direction = Direction.DOWN;
+        int i = cart.getPosition().getValue0();
+        int j = cart.getPosition().getValue1();
+        char nextSymbol;
+        if (cart.getDirection() == Direction.RIGHT) {
+          nextSymbol = track[i][j + 1];
+          if (nextSymbol == '\\') {
+            cart.setDirection(Direction.DOWN);
           } else if (nextSymbol == '/') {
-            kart.direction = Direction.UP;
+            cart.setDirection(Direction.UP);
           } else if (nextSymbol == '+') {
-            kart.direction = kart.getDirectionForTurn(kart.getTurn());
-            kart.nextTurn();
+          cart.setDirection(cart.getDirectionForTurn(cart.getTurn()));
+            cart.nextTurn();
           }
-          kart.setPosition(new Pair<>(i, j + 1));
-          track[i][j] = kart.currentSymbol;
-          if (nextSymbol != 'v' && nextSymbol != '^' && nextSymbol != '<' && nextSymbol != '>') {
-            kart.currentSymbol = nextSymbol;
-          }
-          track[i][j + 1] = getKartSymbolForDirection(kart.direction);
-        } else if (kart.direction == Direction.LEFT) {
-          char nextSymbol = track[i][j - 1];
-          if (nextSymbol == '-') {
-            kart.direction = Direction.LEFT;
-          } else if (nextSymbol == '\\') {
-            kart.direction = Direction.UP;
+          cart.setPosition(new Pair<>(i, j + 1));
+          track[i][j + 1] = getKartSymbolForDirection(cart.getDirection());
+        } else if (cart.direction == Direction.LEFT) {
+          nextSymbol = track[i][j - 1];
+          if (nextSymbol == '\\') {
+            cart.setDirection(Direction.UP);
           } else if (nextSymbol == '/') {
-            kart.direction = Direction.DOWN;
+            cart.setDirection(Direction.DOWN);
           } else if (nextSymbol == '+') {
-            kart.direction = kart.getDirectionForTurn(kart.getTurn());
-            kart.nextTurn();
+            cart.setDirection(cart.getDirectionForTurn(cart.getTurn()));
+            cart.nextTurn();
           }
-          kart.setPosition(new Pair<>(i, j - 1));
-          track[i][j] = kart.currentSymbol;
-          if (nextSymbol != 'v' && nextSymbol != '^' && nextSymbol != '<' && nextSymbol != '>') {
-            kart.currentSymbol = nextSymbol;
-          }
-          track[i][j - 1] = getKartSymbolForDirection(kart.direction);
-        } else if (kart.direction == Direction.UP) {
-          char nextSymbol = track[i - 1][j];
-          if (nextSymbol == '|') {
-            kart.direction = Direction.UP;
-          } else if (nextSymbol == '\\') {
-            kart.direction = Direction.LEFT;
+          cart.setPosition(new Pair<>(i, j - 1));
+          track[i][j - 1] = getKartSymbolForDirection(cart.getDirection());
+        } else if (cart.getDirection() == Direction.UP) {
+          nextSymbol = track[i - 1][j];
+          if (nextSymbol == '\\') {
+            cart.setDirection(Direction.LEFT);
           } else if (nextSymbol == '/') {
-            kart.direction = Direction.RIGHT;
+            cart.setDirection(Direction.RIGHT);
           } else if (nextSymbol == '+') {
-            kart.direction = kart.getDirectionForTurn(kart.getTurn());
-            kart.nextTurn();
+            cart.setDirection(cart.getDirectionForTurn(cart.getTurn()));
+            cart.nextTurn();
           }
-          kart.setPosition(new Pair<>(i - 1, j));
-          track[i][j] = kart.currentSymbol;
-          if (nextSymbol != 'v' && nextSymbol != '^' && nextSymbol != '<' && nextSymbol != '>') {
-            kart.currentSymbol = nextSymbol;
-          }
-          track[i - 1][j] = getKartSymbolForDirection(kart.direction);
+          cart.setPosition(new Pair<>(i - 1, j));
+          track[i - 1][j] = getKartSymbolForDirection(cart.direction);
         } else {
-          char nextSymbol = track[i + 1][j];
-          if (nextSymbol == '|') {
-            kart.direction = Direction.DOWN;
-          } else if (nextSymbol == '\\') {
-            kart.direction = Direction.RIGHT;
+          nextSymbol = track[i + 1][j];
+          if (nextSymbol == '\\') {
+            cart.setDirection(Direction.RIGHT);
           } else if (nextSymbol == '/') {
-            kart.direction = Direction.LEFT;
+            cart.setDirection(Direction.LEFT);
           } else if (nextSymbol == '+') {
-            kart.direction = kart.getDirectionForTurn(kart.getTurn());
-            kart.nextTurn();
+            cart.setDirection(cart.getDirectionForTurn(cart.getTurn()));
+            cart.nextTurn();
           }
-          kart.setPosition(new Pair<>(i + 1, j));
-          track[i][j] = kart.currentSymbol;
-          if (nextSymbol != 'v' && nextSymbol != '^' && nextSymbol != '<' && nextSymbol != '>') {
-            kart.currentSymbol = nextSymbol;
-          }
-          track[i + 1][j] = getKartSymbolForDirection(kart.direction);
+          cart.setPosition(new Pair<>(i + 1, j));
+          track[i + 1][j] = getKartSymbolForDirection(cart.direction);
         }
-        List<Kart> collisionKarts = karts.stream()
-            .filter(k -> k.getPosition().equals(kart.getPosition()))
-            .collect(Collectors.toCollection(ArrayList::new));
-        if (collisionKarts.size() == 2) {
-//          System.out.println("CRASH Coordinate { x: " + kart.getPosition().getValue1() + ", y: " + kart.getPosition().getValue0() + " }");
-          position = kart.getPosition();
+        track[i][j] = cart.getCurrentSymbol();
+        if (nextSymbol != 'v' && nextSymbol != '^' && nextSymbol != '<' && nextSymbol != '>') {
+          cart.setCurrentSymbol(nextSymbol);
+        }
+        List<Cart> collisionCarts =
+            carts.stream()
+                .filter(k -> k.getPosition().equals(cart.getPosition()))
+                .collect(Collectors.toCollection(ArrayList::new));
+        // if we have two carts with the same position in the Cart list that means a collision as
+        // occurred
+        if (collisionCarts.size() == 2) {
+          // when we restore the track symbol when collision has happened, we need to replace with
+          // the previous cart
+          // symbol which was already there
+          position = cart.getPosition();
           int x = position.getValue0();
           int y = position.getValue1();
-          System.out.println(y + ", " + x);
-          Optional<Kart> previousKart = karts.stream().filter(k -> k.getPosition().equals(kart.getPosition())).skip(1).findFirst();
-          if (previousKart.isPresent()) {
-            track[x][y] = previousKart.get().getCurrentSymbol();
-          }else {
-            System.out.println("-----------------FAULT-------------------");
-            track[x][y] = kart.getCurrentSymbol();
-          }
+          Optional<Cart> previousCart =
+              carts.stream()
+                  .filter(
+                      k ->
+                          k.getPosition().equals(cart.getPosition())
+                              && k.getDirection() != cart.getDirection())
+                  .findFirst();
+          previousCart.ifPresent(crashedCart -> track[x][y] = crashedCart.getCurrentSymbol());
           if (firstCollision) {
             break outer;
           }
-          toBeRemovedKarts.addAll(collisionKarts);
+          crashedCarts.addAll(collisionCarts);
         }
       }
-      karts.removeAll(toBeRemovedKarts);
-      if (karts.size() == 1) {
-        return karts.get(0).getPosition();
+      carts.removeAll(crashedCarts);
+      if (carts.size() == 1) {
+        return carts.get(0).getPosition();
       }
-      tick++;
     } while (true);
     return position;
   }
 
   Pair<Integer, Integer> getResult1() {
-    updateInitialKartPositions();
-    Pair<Integer, Integer> collisionPosition = moveKarts(true);
-    Integer x = collisionPosition.getValue0();
-    Integer y = collisionPosition.getValue1();
-    collisionPosition = collisionPosition.setAt0(y).setAt1(x);
-    return collisionPosition;
+    updateInitialCartsPositions();
+    Pair<Integer, Integer> collisionPosition = findCollision(true);
+    return new Pair<>(collisionPosition.getValue1(), collisionPosition.getValue0());
   }
 
   Pair<Integer, Integer> getResult2() {
-    updateInitialKartPositions();
-    moveKarts(false);
-//    for (char[] l: track) {
-//      for (char c: l) {
-//        System.out.print(c);
-//      }
-//      System.out.println();
-//    }
-    Pair<Integer, Integer> lastKartPosition = karts.get(0).getPosition();
-    Integer x = lastKartPosition.getValue0();
-    Integer y = lastKartPosition.getValue1();
-    lastKartPosition = lastKartPosition.setAt0(y).setAt1(x);
-    return lastKartPosition;
+    updateInitialCartsPositions();
+    Pair<Integer, Integer> lastCartPosition = findCollision(false);
+    return new Pair<>(lastCartPosition.getValue1(), lastCartPosition.getValue0());
   }
 
-  static class Kart implements Comparable<Kart> {
+  static class Cart implements Comparable<Cart> {
 
-    public Turn getTurn() {
+    Turn getTurn() {
       return turn;
-    }
-
-    public void setTurn(Turn turn) {
-      this.turn = turn;
     }
 
     Pair<Integer, Integer> position;
     char currentSymbol;
 
-    public Kart(
-        Pair<Integer, Integer> position, char currentSymbol, Direction direction, Turn turn) {
+    void setCurrentSymbol(char currentSymbol) {
+      this.currentSymbol = currentSymbol;
+    }
+
+    Cart(Pair<Integer, Integer> position, char currentSymbol, Direction direction) {
       this.position = position;
       this.currentSymbol = currentSymbol;
       this.direction = direction;
-      this.turn = turn;
+      this.turn = Turn.LEFT;
     }
 
-    public Pair<Integer, Integer> getPosition() {
+    void setDirection(Direction direction) {
+      this.direction = direction;
+    }
+
+    Pair<Integer, Integer> getPosition() {
       return position;
     }
 
-    public void setPosition(Pair<Integer, Integer> position) {
+    void setPosition(Pair<Integer, Integer> position) {
       this.position = position;
     }
 
-    public char getCurrentSymbol() {
+    char getCurrentSymbol() {
       return currentSymbol;
     }
 
-    public void setCurrentSymbol(char currentSymbol) {
-      this.currentSymbol = currentSymbol;
-    }
-
-    public Direction getDirection() {
+    Direction getDirection() {
       return direction;
-    }
-
-    public void setDirection(Direction direction) {
-      this.direction = direction;
     }
 
     Direction direction;
@@ -262,24 +220,24 @@ class Day13 {
 
     @Override
     public String toString() {
-      return "Kart{"
-          + "position="
-          + position
-          + ", currentSymbol="
-          + currentSymbol
-          + ", direction="
+      return "Cart { "
+          + "x: "
+          + position.getValue1()
+          + ", y: "
+          + position.getValue0()
+          + ", direction: "
           + direction
-          + ", turn="
+          + ", next_turn: "
           + turn
-          + '}';
+          + " }";
     }
 
     @Override
-    public int compareTo(Kart o) {
+    public int compareTo(Cart o) {
       return this.position.compareTo(o.getPosition());
     }
 
-    public Direction getDirectionForTurn(Turn turn) {
+    Direction getDirectionForTurn(Turn turn) {
       Direction dir = Direction.DOWN;
       if (this.direction == Direction.RIGHT) {
         switch (turn) {
@@ -292,6 +250,8 @@ class Day13 {
           case STRAIGHT:
             dir = Direction.RIGHT;
             break;
+          default:
+            throw new UnsupportedOperationException("Invalid direction value");
         }
       } else if (this.direction == Direction.LEFT) {
         switch (turn) {
@@ -304,6 +264,8 @@ class Day13 {
           case STRAIGHT:
             dir = Direction.LEFT;
             break;
+          default:
+            throw new UnsupportedOperationException("Invalid direction value");
         }
       } else if (this.direction == Direction.UP) {
         switch (turn) {
@@ -316,6 +278,8 @@ class Day13 {
           case STRAIGHT:
             dir = Direction.UP;
             break;
+          default:
+            throw new UnsupportedOperationException("Invalid direction value");
         }
       } else if (this.direction == Direction.DOWN) {
         switch (turn) {
@@ -328,12 +292,14 @@ class Day13 {
           case STRAIGHT:
             dir = Direction.DOWN;
             break;
+          default:
+            throw new UnsupportedOperationException("Invalid direction value");
         }
       }
       return dir;
     }
 
-    public void nextTurn() {
+    void nextTurn() {
       if (this.turn == Turn.LEFT) {
         this.turn = Turn.STRAIGHT;
       } else if (this.turn == Turn.STRAIGHT) {
@@ -345,25 +311,15 @@ class Day13 {
   }
 
   enum Direction {
-    UP(0),
-    LEFT(1),
-    DOWN(2),
-    RIGHT(3);
-    private final int direction;
-
-    Direction(int direction) {
-      this.direction = direction;
-    }
+    UP,
+    LEFT,
+    DOWN,
+    RIGHT
   }
 
   enum Turn {
-    LEFT(0),
-    RIGHT(1),
-    STRAIGHT(2);
-    private final int turn;
-
-    Turn(int turn) {
-      this.turn = turn;
-    }
+    LEFT,
+    RIGHT,
+    STRAIGHT
   }
 }
