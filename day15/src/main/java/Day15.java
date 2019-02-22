@@ -97,14 +97,15 @@ class Day15 {
         if (unit.getUnitType() == UnitType.ELF) {
           targetsInRangePositions = units.stream()
               .filter(u -> u.getUnitType() == UnitType.GOBLIN)
-              .flatMap(u -> getAdjacentSquares(u.getPosition()).stream()).collect(
+              .flatMap(u -> getAdjacentSquares(new Pair<>(u.getPosition(), 0)).stream()).collect(
                   Collectors.toCollection(ArrayList::new));
         } else {
           targetsInRangePositions = units.stream()
               .filter(u -> u.getUnitType() == UnitType.ELF)
-              .flatMap(u -> getAdjacentSquares(u.getPosition()).stream()).collect(
+              .flatMap(u -> getAdjacentSquares(new Pair<>(u.getPosition(), 0)).stream()).collect(
                   Collectors.toCollection(ArrayList::new));
         }
+        System.out.println(targetsInRangePositions);
       }
     }
     return -1;
