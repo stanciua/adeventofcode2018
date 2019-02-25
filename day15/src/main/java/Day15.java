@@ -1,111 +1,152 @@
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Deque;
-import java.util.HashMap;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.javatuples.Pair;
 
 class Day15 {
 
-  char[][] area;
+  List<Square> area;
   List<Unit> units;
+  final int n;
+  final int m;
 
   Day15() throws Exception {
     String[] lines = Files.lines(Path.of("src/test/java/input.txt")).toArray(String[]::new);
-    area = new char[lines.length][];
-    IntStream.range(0, lines.length).forEach(i -> area[i] = lines[i].toCharArray());
+    n = lines.length;
+    m = lines[0].length();
+    area = new ArrayList<>();
+    IntStream.range(0, lines.length)
+        .forEach(
+            i ->
+                IntStream.range(0, lines[i].length())
+                    .forEach(
+                        j -> area.add(new Square(new Pair<>(i, j), lines[i].toCharArray()[j]))));
     units = new ArrayList<>();
-    for (int i = 0; i < area.length; i++) {
-      for (int j = 0; j < area[0].length; j++) {
-        Pair<Integer, Integer> position = new Pair<>(i, j);
-        if (area[i][j] == 'G') {
-          Unit goblin = new Unit(position, UnitType.GOBLIN);
-          units.add(goblin);
-        } else if (area[i][j] == 'E') {
-          Unit elf = new Unit(position, UnitType.ELF);
-          units.add(elf);
-        }
+    for (Square square : area) {
+      if (square.getSymbol() == 'G') {
+        Unit goblin = new Unit(square.getPosition(), UnitType.GOBLIN);
+        units.add(goblin);
+      } else if (square.getSymbol() == 'E') {
+        Unit elf = new Unit(square.getPosition(), UnitType.ELF);
+        units.add(elf);
       }
     }
   }
 
-  List<Pair<Pair<Integer, Integer>, Integer>> getAdjacentSquares(
-      Pair<Pair<Integer, Integer>, Integer> unitPosition) {
-    List<Pair<Pair<Integer, Integer>, Integer>> adjacentSquares = new ArrayList<>();
-    int i = unitPosition.getValue0().getValue0();
-    int j = unitPosition.getValue0().getValue1();
-    int counter = unitPosition.getValue1();
+  List<Square> getAdjacentSquares(Square currentSquare) {
+    List<Square> adjacentSquares = new ArrayList<>();
+    int i = currentSquare.getPosition().getValue0();
+    int j = currentSquare.getPosition().getValue1();
     // left
-    if (area[i][j - 1] == '.') {
-      adjacentSquares.add(new Pair<>(new Pair<>(i, j - 1), counter + 1));
+    Square square = area.get(i * m + (j - 1));
+    if (square.getSymbol() == '.') {
+      adjacentSquares.add(square);
     }
     // right
-    if (area[i][j + 1] == '.') {
-      adjacentSquares.add(new Pair<>(new Pair<>(i, j + 1), counter + 1));
+    square = area.get(i * m + (j + 1));
+    if (square.getSymbol() == '.') {
+      adjacentSquares.add(square);
     }
     // up
-    if (area[i - 1][j] == '.') {
-      adjacentSquares.add(new Pair<>(new Pair<>(i - 1, j), counter + 1));
+    square = area.get((i - 1) * m + j);
+    if (square.getSymbol() == '.') {
+      adjacentSquares.add(square);
     }
     // down
-    if (area[i + 1][j] == '.') {
-      adjacentSquares.add(new Pair<>(new Pair<>(i + 1, j), counter + 1));
+    square = area.get((i + 1) * m + j);
+    if (square.getSymbol() == '.') {
+      adjacentSquares.add(square);
     }
-
     return adjacentSquares;
   }
 
-  Deque<Pair<Pair<Integer, Integer>, Integer>> pathFinding(Pair<Integer, Integer> from,
-      Pair<Integer, Integer> to) {
-    Deque<Pair<Pair<Integer, Integer>, Integer>> queue = new LinkedBlockingDeque<>();
-    queue.add(new Pair<>(to, 0));
-    int count = queue.size();
-    while (true) {
-      List<Pair<Pair<Integer, Integer>, Integer>> adjacentSquares = getAdjacentSquares(queue.pop());
-      List<Pair<Integer, Integer>> toBeRemovedSquares = new ArrayList<>();
-      for (var square : adjacentSquares) {
-        queue.stream()
-            .filter(p -> p.getValue0() == square.getValue0() && p.getValue1() <= square.getValue1())
-            .findFirst().ifPresent(s -> toBeRemovedSquares.add(s.getValue0()));
+  List<Square> aStarPathFinding(Square from, Square to) {
+    List<Square> path = new ArrayList<>();
+    List<Square> openList = new ArrayList<>();
+    List<Square> closedList = new ArrayList<>();
+
+    openList.add(from);
+    while (!openList.isEmpty()) {
+      Square currentSquare = openList.stream().min(Comparator.comparing(Square::getF)).get();
+      openList.remove(currentSquare);
+      closedList.add(currentSquare);
+
+      if (currentSquare.getPosition().equals(to.getPosition())) {
+        Square current = currentSquare;
+        while (current != null) {
+          path.add(current);
+          current = current.parent;
+        }
+        return path;
       }
+      List<Square> adjacentSquares = getAdjacentSquares(currentSquare);
+      for (Square square : adjacentSquares) {
+        square.setParent(currentSquare);
+        if (closedList.stream()
+            .filter(s -> s.getPosition().equals(square.getPosition()))
+            .findFirst()
+            .isPresent()) {
+          continue;
+        }
 
-      toBeRemovedSquares.forEach(square -> adjacentSquares.removeIf(p -> p.getValue0() == square));
+        square.setG(currentSquare.getG() + 1);
+        square.setH(manhattanDistance(square, to));
+        square.setF(square.getG() + square.getH());
 
-      queue.addAll(adjacentSquares);
-      if (adjacentSquares.stream().filter(square -> square.getValue0() == from).findFirst()
-          .isPresent()) {
-        break;
+        Optional<Square> openListSquareOptional =
+            openList.stream().filter(s -> s.getPosition().equals(square.getPosition())).findFirst();
+        if (openListSquareOptional.isPresent()) {
+          Square openListSquare = openListSquareOptional.get();
+          int squareG = openListSquare.getG();
+          if (square.getG() > squareG) {
+            continue;
+          }
+        }
+
+        openList.add(square);
       }
     }
-    return queue;
+    return path;
+  }
+
+  int manhattanDistance(Square from, Square to) {
+    int x1 = from.getPosition().getValue0();
+    int y1 = from.getPosition().getValue1();
+    int x2 = to.getPosition().getValue0();
+    int y2 = to.getPosition().getValue1();
+
+    return Math.abs(x1 - x2) + Math.abs(y1 - y2);
+  }
+
+  Square getSquareForUnit(Unit unit) {
+    return area.stream().filter(s -> s.getPosition().equals(unit.getPosition())).findFirst().get();
   }
 
   int getResult1() {
     for (int round = 0; round < 1; round++) {
       // iterate each unit in  reading order
       for (Unit unit : units) {
-        List<Pair<Pair<Integer, Integer>, Integer>> targetsInRangePositions;
+        List<Square> targetsInRangePositions;
         // find targets in range for each type of unit
         if (unit.getUnitType() == UnitType.ELF) {
-          targetsInRangePositions = units.stream()
-              .filter(u -> u.getUnitType() == UnitType.GOBLIN)
-              .flatMap(u -> getAdjacentSquares(new Pair<>(u.getPosition(), 0)).stream()).collect(
-                  Collectors.toCollection(ArrayList::new));
+          targetsInRangePositions =
+              units.stream()
+                  .filter(u -> u.getUnitType() == UnitType.GOBLIN)
+                  .flatMap(u -> getAdjacentSquares(getSquareForUnit(u)).stream())
+                  .collect(Collectors.toCollection(ArrayList::new));
         } else {
-          targetsInRangePositions = units.stream()
-              .filter(u -> u.getUnitType() == UnitType.ELF)
-              .flatMap(u -> getAdjacentSquares(new Pair<>(u.getPosition(), 0)).stream()).collect(
-                  Collectors.toCollection(ArrayList::new));
+          targetsInRangePositions =
+              units.stream()
+                  .filter(u -> u.getUnitType() == UnitType.ELF)
+                  .flatMap(u -> getAdjacentSquares(getSquareForUnit(u)).stream())
+                  .collect(Collectors.toCollection(ArrayList::new));
         }
-        System.out.println(targetsInRangePositions);
+        targetsInRangePositions.stream().forEach(t -> System.out.println(aStarPathFinding(getSquareForUnit(unit), t)));
       }
     }
     return -1;
@@ -113,6 +154,85 @@ class Day15 {
 
   int getResult2() {
     return -1;
+  }
+
+  static class Square {
+    int g;
+    Square parent;
+
+    public Square getParent() {
+      return parent;
+    }
+
+    public void setParent(Square parent) {
+      this.parent = parent;
+    }
+
+    @Override
+    public String toString() {
+      return "Square{" +
+              "g=" + g +
+              ", h=" + h +
+              ", f=" + f +
+              ", position=" + position +
+              ", symbol=" + symbol +
+              '}';
+    }
+
+    public Square(Pair<Integer, Integer> position, char symbol) {
+      this.position = position;
+      this.symbol = symbol;
+      this.g = 0;
+      this.f = 0;
+      this.h = 0;
+      this.parent = null;
+    }
+
+    public int getG() {
+      return g;
+    }
+
+    public void setG(int g) {
+      this.g = g;
+    }
+
+    public int getH() {
+      return h;
+    }
+
+    public void setH(int h) {
+      this.h = h;
+    }
+
+    public int getF() {
+      return f;
+    }
+
+    public void setF(int f) {
+      this.f = f;
+    }
+
+    public Pair<Integer, Integer> getPosition() {
+      return position;
+    }
+
+    public void setPosition(Pair<Integer, Integer> position) {
+      this.position = position;
+    }
+
+    int h;
+
+    public char getSymbol() {
+      return symbol;
+    }
+
+    public void setSymbol(char symbol) {
+      this.symbol = symbol;
+    }
+
+    int f;
+    Pair<Integer, Integer> position;
+    char symbol;
   }
 
   static class Unit {
@@ -148,7 +268,7 @@ class Day15 {
       this.unitType = unitType;
     }
 
-    public final static int ATTACK_POWER = 3;
+    public static final int ATTACK_POWER = 3;
     Pair<Integer, Integer> position;
     UnitType unitType;
   }
