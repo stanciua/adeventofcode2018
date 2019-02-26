@@ -66,6 +66,7 @@ class Day15 {
   }
 
   List<Square> aStarPathFinding(Square from, Square to) {
+    System.out.println("from: " + from + ", " + "to: " + to);
     List<Square> path = new ArrayList<>();
     List<Square> openList = new ArrayList<>();
     List<Square> closedList = new ArrayList<>();
@@ -86,7 +87,6 @@ class Day15 {
       }
       List<Square> adjacentSquares = getAdjacentSquares(currentSquare);
       for (Square square : adjacentSquares) {
-        square.setParent(currentSquare);
         if (closedList.stream()
             .filter(s -> s.getPosition().equals(square.getPosition()))
             .findFirst()
@@ -108,6 +108,7 @@ class Day15 {
           }
         }
 
+        square.setParent(currentSquare);
         openList.add(square);
       }
     }
@@ -146,7 +147,8 @@ class Day15 {
                   .flatMap(u -> getAdjacentSquares(getSquareForUnit(u)).stream())
                   .collect(Collectors.toCollection(ArrayList::new));
         }
-        targetsInRangePositions.stream().forEach(t -> System.out.println(aStarPathFinding(getSquareForUnit(unit), t)));
+        targetsInRangePositions.stream()
+            .forEach(t -> System.out.println(aStarPathFinding(getSquareForUnit(unit), t)));
       }
     }
     return -1;
@@ -170,13 +172,18 @@ class Day15 {
 
     @Override
     public String toString() {
-      return "Square{" +
-              "g=" + g +
-              ", h=" + h +
-              ", f=" + f +
-              ", position=" + position +
-              ", symbol=" + symbol +
-              '}';
+      return "Square{"
+          + "g="
+          + g
+          + ", h="
+          + h
+          + ", f="
+          + f
+          + ", position="
+          + position
+          + ", symbol="
+          + symbol
+          + '}';
     }
 
     public Square(Pair<Integer, Integer> position, char symbol) {
