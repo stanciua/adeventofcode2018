@@ -2,7 +2,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,18 +22,19 @@ class Day16 {
       Pattern.compile("(\\d+)\\s(\\d+)\\s(\\d+)\\s(\\d+)");
   private static final Pattern afterPattern =
       Pattern.compile("After:\\s\\s\\[(\\d+),\\s(\\d+),\\s(\\d+),\\s(\\d+)\\]");
-  
+
   Day16() throws Exception {
     beforeRegisters = new ArrayList<>();
-    afterRegisters = new  ArrayList<>();
-    instructions = new  ArrayList<>();
-    part2Instructions = new  ArrayList<>();
+    afterRegisters = new ArrayList<>();
+    instructions = new ArrayList<>();
+    part2Instructions = new ArrayList<>();
     String[] lines = Files.lines(Path.of("src/test/java/input.txt")).toArray(String[]::new);
     boolean isEndOfFirstPart = false;
     for (int i = 0; i < lines.length; i++) {
       String line = lines[i];
-      
-      if (i < lines.length - 2 && line.isEmpty() && lines[i + 1].isEmpty() && lines[i+2].isEmpty()) {
+
+      if (i < lines.length - 2 && line.isEmpty() && lines[i + 1].isEmpty() && lines[i + 2]
+          .isEmpty()) {
         isEndOfFirstPart = true;
       }
       if (!isEndOfFirstPart) {
@@ -77,11 +80,225 @@ class Day16 {
     }
   }
 
-  void addr(int[]inputRegisters, int[]outputRegisters, Instruction instruction) {
-    System.arraycopy(inputRegisters, 0, outputRegisters,0, inputRegisters.length);
+  void addr(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    outputRegisters[instruction.outputC] =
+        outputRegisters[instruction.inputA] + outputRegisters[instruction.inputB];
   }
-  
+
+  void addi(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    outputRegisters[instruction.outputC] =
+        outputRegisters[instruction.inputA] + instruction.inputB;
+  }
+
+  void mulr(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    outputRegisters[instruction.outputC] =
+        outputRegisters[instruction.inputA] * outputRegisters[instruction.inputB];
+  }
+
+  void muli(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    outputRegisters[instruction.outputC] =
+        outputRegisters[instruction.inputA] * instruction.inputB;
+  }
+
+  void banr(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    outputRegisters[instruction.outputC] =
+        outputRegisters[instruction.inputA] & outputRegisters[instruction.inputB];
+  }
+
+  void bani(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    outputRegisters[instruction.outputC] =
+        outputRegisters[instruction.inputA] & instruction.inputB;
+  }
+
+
+  void borr(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    outputRegisters[instruction.outputC] =
+        outputRegisters[instruction.inputA] | outputRegisters[instruction.inputB];
+  }
+
+  void bori(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    outputRegisters[instruction.outputC] =
+        outputRegisters[instruction.inputA] | instruction.inputB;
+  }
+
+  void setr(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    outputRegisters[instruction.outputC] =
+        outputRegisters[instruction.inputA];
+  }
+
+  void seti(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    outputRegisters[instruction.outputC] =
+        instruction.inputA;
+  }
+
+  void gtir(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    if (instruction.inputA > outputRegisters[instruction.inputB]) {
+      outputRegisters[instruction.outputC] = 1;
+    } else {
+      outputRegisters[instruction.outputC] = 0;
+    }
+  }
+
+  void gtri(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    if (outputRegisters[instruction.inputA] > instruction.inputB) {
+      outputRegisters[instruction.outputC] = 1;
+    } else {
+      outputRegisters[instruction.outputC] = 0;
+    }
+  }
+
+  void gtrr(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    if (outputRegisters[instruction.inputA] > outputRegisters[instruction.inputB]) {
+      outputRegisters[instruction.outputC] = 1;
+    } else {
+      outputRegisters[instruction.outputC] = 0;
+    }
+  }
+
+
+  void eqir(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    if (instruction.inputA == outputRegisters[instruction.inputB]) {
+      outputRegisters[instruction.outputC] = 1;
+    } else {
+      outputRegisters[instruction.outputC] = 0;
+    }
+  }
+
+  void eqri(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    if (outputRegisters[instruction.inputA] == instruction.inputB) {
+      outputRegisters[instruction.outputC] = 1;
+    } else {
+      outputRegisters[instruction.outputC] = 0;
+    }
+  }
+
+  void eqrr(int[] inputRegisters, int[] outputRegisters, Instruction instruction) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    if (outputRegisters[instruction.inputA] == outputRegisters[instruction.inputB]) {
+      outputRegisters[instruction.outputC] = 1;
+    } else {
+      outputRegisters[instruction.outputC] = 0;
+    }
+  }
+
   int getResult1() {
+    Map<Opcode, Integer> countMap = new HashMap<>();
+    int[] outputRegisters = new int[4];
+    for (int i = 0; i < instructions.size(); i++) {
+      addr(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      addi(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      mulr(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      muli(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      banr(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      bani(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      borr(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      bori(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      setr(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      seti(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      gtir(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      gtri(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      gtrr(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      eqir(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      eqri(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+      eqrr(beforeRegisters.get(i), outputRegisters, instructions.get(i));
+      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
+        Opcode opcode = instructions.get(i).getOpcode();
+        countMap.put(opcode,
+            countMap.getOrDefault(opcode, 0) + 1);
+      }
+    }
+    
+    System.out.println(countMap);
     return -1;
   }
 
@@ -120,7 +337,7 @@ class Day16 {
       return "Instruction{" +
           "opcode=" + opcode +
           ", inputA=" + inputA +
-          ", intputB=" + intputB +
+          ", inputB=" + inputB +
           ", outputC=" + outputC +
           '}';
     }
@@ -129,10 +346,10 @@ class Day16 {
       return opcode;
     }
 
-    public Instruction(Opcode opcode, int inputA, int intputB, int outputC) {
+    public Instruction(Opcode opcode, int inputA, int inputB, int outputC) {
       this.opcode = opcode;
       this.inputA = inputA;
-      this.intputB = intputB;
+      this.inputB = inputB;
       this.outputC = outputC;
     }
 
@@ -145,11 +362,11 @@ class Day16 {
     }
 
     public int getIntputB() {
-      return intputB;
+      return inputB;
     }
 
-    public void setIntputB(int intputB) {
-      this.intputB = intputB;
+    public void setIntputB(int inputB) {
+      this.inputB = inputB;
     }
 
     public int getOutputC() {
@@ -166,7 +383,7 @@ class Day16 {
 
     Opcode opcode;
     int inputA;
-    int intputB;
+    int inputB;
     int outputC;
   }
 }
