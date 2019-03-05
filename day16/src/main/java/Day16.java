@@ -196,108 +196,54 @@ class Day16 {
     }
   }
 
+  void updateCounterIfEqual(int index, int[] outputRegisters, Map<String, Integer> countMap) {
+    if (Arrays.equals(outputRegisters, afterRegisters.get(index))) {
+      Instruction instruction = instructions.get(index);
+      String key = instruction.getInputA() + " " + instruction.getInputB() + " " + instruction.getOutputC();
+      countMap.put(key,
+          countMap.getOrDefault(key, 0) + 1);
+    }
+  }
+
   int getResult1() {
-    Map<Opcode, Integer> countMap = new HashMap<>();
+    Map<String, Integer> countMap = new HashMap<>();
     int[] outputRegisters = new int[4];
     for (int i = 0; i < instructions.size(); i++) {
       addr(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       addi(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       mulr(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       muli(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       banr(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       bani(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       borr(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       bori(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       setr(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       seti(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       gtir(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       gtri(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       gtrr(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       eqir(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       eqri(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
       eqrr(beforeRegisters.get(i), outputRegisters, instructions.get(i));
-      if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-        Opcode opcode = instructions.get(i).getOpcode();
-        countMap.put(opcode,
-            countMap.getOrDefault(opcode, 0) + 1);
-      }
+      updateCounterIfEqual(i, outputRegisters, countMap);
     }
-    
+
+//    System.out.println(countMap.entrySet().stream().filter(e -> e.getValue() >= 3).count());
     System.out.println(countMap);
     return -1;
   }
@@ -361,11 +307,11 @@ class Day16 {
       this.inputA = inputA;
     }
 
-    public int getIntputB() {
+    public int getInputB() {
       return inputB;
     }
 
-    public void setIntputB(int inputB) {
+    public void setInputB(int inputB) {
       this.inputB = inputB;
     }
 
