@@ -8,19 +8,19 @@ public class Day16Test {
   public void testDay6Result1() {
     try {
       Day16 day16 = new Day16();
-      assertEquals(-1, day16.getResult1());
+      assertEquals(521, day16.getResult1());
     } catch (Exception e) {
       assert (false);
     }
   }
 
-//  @Test
-//  public void testDay6Result2() {
-//    try {
-//      Day16 day16 = new Day16();
-//      assertEquals(-1, day16.getResult2());
-//    } catch (Exception e) {
-//      assert (false);
-//    }
-//  }
+  @Test
+  public void testDay6Result2() {
+    try {
+      Day16 day16 = new Day16();
+      assertEquals(594, day16.getResult2());
+    } catch (Exception e) {
+      assert (false);
+    }
+  }
 }
