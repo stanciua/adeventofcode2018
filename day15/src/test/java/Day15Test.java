@@ -15,13 +15,13 @@ public class Day15Test {
     }
   }
 
-  @Test
-  public void testDay6Result2() {
-    try {
-      Day15 day15 = new Day15();
-      assertEquals(-1, day15.getResult2());
-    } catch (Exception e) {
-      assert (false);
-    }
-  }
+  // @Test
+  // public void testDay6Result2() {
+  //   try {
+  //     Day15 day15 = new Day15();
+  //     assertEquals(-1, day15.getResult2());
+  //   } catch (Exception e) {
+  //     assert (false);
+  //   }
+  // }
 }
