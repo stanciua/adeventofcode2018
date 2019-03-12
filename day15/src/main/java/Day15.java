@@ -198,13 +198,111 @@ class Day15 {
     return Optional.of(winningPath.get(winningPath.size() - 1));
   }
 
+  Optional<Unit> getUnitFromSquare(Square square) {
+    return units.stream().filter(u -> u.getPosition().equals(square.getPosition())).findFirst();
+  }
+
+  Optional<Unit> getEnemyToAttack(Unit unit) {
+    Square currentSquare = getSquareForUnit(unit);
+    int i = currentSquare.getPosition().getValue0();
+    int j = currentSquare.getPosition().getValue1();
+    char enemy = 'G';
+    if (unit.getUnitType() == UnitType.GOBLIN) {
+      enemy = 'E';
+    } else {
+      enemy = 'G';
+    }
+    List<Square> enemies = new ArrayList<>();
+    // up
+    Square square = area.get((i - 1) * m + j);
+    if (square.getSymbol() == enemy) {
+      enemies.add(square);
+    }
+    // left
+    square = area.get(i * m + (j - 1));
+    if (square.getSymbol() == enemy) {
+      enemies.add(square);
+    }
+    // right
+    square = area.get(i * m + (j + 1));
+    if (square.getSymbol() == enemy) {
+      enemies.add(square);
+    }
+    // down
+    square = area.get((i + 1) * m + j);
+    if (square.getSymbol() == enemy) {
+      enemies.add(square);
+    }
+
+    int minHP = Integer.MAX_VALUE;
+    for (var s : enemies) {
+      Optional<Unit> squareUnit = getUnitFromSquare(s);
+      if (squareUnit.isPresent()) {
+        minHP = Integer.min(minHP, squareUnit.get().getHp());
+      }
+    }
+    final int minHPFinal = minHP;
+    Optional<Square> target = enemies.stream()
+        .filter(e -> getUnitFromSquare(e).get().getHp() == minHPFinal)
+        .sorted(Comparator.comparing(Square::getPosition)).findFirst();
+    if (target.isPresent()) {
+      return getUnitFromSquare(target.get());
+    }
+
+    return Optional.empty();
+  }
+
+  void unitAttack(Unit unit) {
+    unit.setHp(unit.getHp() - Unit.ATTACK_POWER);
+    if (unit.getHp() <= 0) {
+      System.out.println("(" + unit.getPosition().getValue1() + ", " + unit.getPosition().getValue0() + ")");
+      // we need to destroy the Unit
+      units.removeIf(u -> u.getPosition().equals(unit.getPosition()));
+      // update the unit position in the map area to '.'
+      area.stream()
+          .filter(s -> s.getPosition().equals(unit.getPosition()))
+          .forEach(s -> s.setSymbol('.'));
+    }
+  }
+
   int getResult1() {
-    for (int round = 0; round < 1; round++) {
+    int round = 0;
+    completed:
+    while (true) {
+      System.out.println("round: " + round);
       // iterate each unit in  reading order, make a copy in order to preserve positions at the
-      // begining of the round
+      // beginning of the round
       List<Unit> unitsCopy = new ArrayList<>();
       units.stream().forEach(u -> unitsCopy.add(new Unit(u)));
-      for (Unit unit : unitsCopy) {
+      for (Unit unit : unitsCopy.stream().sorted(Comparator.comparing(Unit::getPosition)).collect(
+          Collectors.toCollection(ArrayList::new))) {
+        // make sure a dead unit doesn't take a turn
+        if (units.stream().filter(u -> u.getPosition().equals(unit.getPosition())).findFirst()
+            .isEmpty()) {
+          continue;
+        }
+        // The combat is over when there's no enemy around
+        UnitType enemyUnitType = unit.getUnitType();
+        if (unit.getUnitType() == UnitType.GOBLIN) {
+          enemyUnitType = UnitType.ELF;
+        } else {
+          enemyUnitType = UnitType.GOBLIN;
+        }
+
+        final UnitType enemyUnitTypeFinal = enemyUnitType;
+        if (units.stream().filter(u -> u.getUnitType() == enemyUnitTypeFinal).count() == 0) {
+          round++;
+          break completed;
+        }
+        var enemy = getEnemyToAttack(unit);
+        if (enemy.isPresent()) {
+//          System.out.println(
+//              "(" + unit.getPosition().getValue1() + ", " + unit.getPosition().getValue0() + ")"
+//                  + " <-> " + "(" + enemy.get().getPosition().getValue1() + ", " + enemy.get()
+//                  .getPosition().getValue0() + ")");
+          unitAttack(enemy.get());
+          continue;
+        }
         var targetInRange = getTargetPositionWithShortestPath(unit);
         if (targetInRange.isEmpty()) {
           continue;
@@ -215,25 +313,37 @@ class Day15 {
           continue;
         }
         // update the unit new position
-        System.out.println(position);
         units.stream()
             .filter(u -> u.getPosition().equals(unit.getPosition()))
             .forEach(newUnit -> newUnit.setPosition(position.get().getPosition()));
-        System.out.println(units);
-        // update the unit old position in the map area to '.'
-        area.stream()
-            .filter(s -> s.getPosition().equals(unit.getPosition()))
-            .forEach(s -> s.setSymbol('.'));
         // update the unit new position in the map area to UnitType: goblin or elf
         area.stream()
             .filter(s -> s.getPosition().equals(position.get().getPosition()))
             .forEach(s -> s.setSymbol(getSquareForUnit(unit).getSymbol()));
-        displayMap();
-      }
+        // update the unit old position in the map area to '.'
+        area.stream()
+            .filter(s -> s.getPosition().equals(unit.getPosition()))
+            .forEach(s -> s.setSymbol('.'));
 
+        Unit currentUnit = units.stream()
+            .filter(u -> u.getPosition().equals(position.get().getPosition())).findFirst().get();
+        Optional<Unit> targetUnit = getEnemyToAttack(currentUnit);
+        if (targetUnit.isPresent()) {
+//          System.out.println(
+//              "(" + unit.getPosition().getValue1() + ", " + unit.getPosition().getValue0() + ")"
+//                  + " <-> " + "(" + targetUnit.get().getPosition().getValue1() + ", " + targetUnit
+//                  .get().getPosition().getValue0() + ")");
+          unitAttack(targetUnit.get());
+          continue;
+        }
+      }
       displayMap();
+      round++;
     }
-    return -1;
+//    units.stream().forEach(System.out::println);
+    return
+        units.stream().mapToInt(u -> u.getHp())
+            .peek(e -> System.out.print(e + " ")).reduce(0, (a, x) -> a += x) * (round - 1);
   }
 
   Optional<Square> getNextMoveForUnit(Square targetInRange, Unit unit) {
@@ -252,14 +362,15 @@ class Day15 {
       adjacentSquareDistances.add(new Pair<>(path.get(0), distance));
       minDistance = Integer.min(distance, minDistance);
     }
-
+    final int minDistanceFinal = minDistance;
     return adjacentSquareDistances.stream()
+        .filter(p -> p.getValue1() == minDistanceFinal)
         .sorted(Comparator.comparing(Pair::getValue1))
         .map(p -> p.getValue0())
         .sorted(Comparator.comparing(Square::getPosition))
         .findFirst();
   }
-  
+
   void displayMap() {
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < m; j++) {
@@ -268,6 +379,7 @@ class Day15 {
       System.out.println();
     }
   }
+
   void plotAreaWithRelativeDistance(Square targetInRange) {
     List<List<Square>> paths = new ArrayList<>();
     dots.stream()
@@ -302,6 +414,7 @@ class Day15 {
   }
 
   static class Square {
+
     int g;
     Square parent;
 
@@ -442,9 +555,11 @@ class Day15 {
     public Unit(Pair<Integer, Integer> position, UnitType unitType) {
       this.position = position;
       this.unitType = unitType;
+      this.hp = INITIAL_HP;
     }
 
     public static final int ATTACK_POWER = 3;
+    public static final int INITIAL_HP = 200;
     Pair<Integer, Integer> position;
     UnitType unitType;
   }
