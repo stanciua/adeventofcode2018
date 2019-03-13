@@ -252,10 +252,10 @@ class Day15 {
     return Optional.empty();
   }
 
-  void unitAttack(Unit unit) {
+  void unitAttack(Unit unit, List<Unit> deadUnits) {
     unit.setHp(unit.getHp() - Unit.ATTACK_POWER);
     if (unit.getHp() <= 0) {
-      System.out.println("(" + unit.getPosition().getValue1() + ", " + unit.getPosition().getValue0() + ")");
+      deadUnits.add(unit);
       // we need to destroy the Unit
       units.removeIf(u -> u.getPosition().equals(unit.getPosition()));
       // update the unit position in the map area to '.'
@@ -267,21 +267,25 @@ class Day15 {
 
   int getResult1() {
     int round = 0;
+    List<Unit> deadUnits = new ArrayList<>();
     completed:
     while (true) {
-      System.out.println("round: " + round);
       // iterate each unit in  reading order, make a copy in order to preserve positions at the
       // beginning of the round
       List<Unit> unitsCopy = new ArrayList<>();
       units.stream().forEach(u -> unitsCopy.add(new Unit(u)));
-      for (Unit unit : unitsCopy.stream().sorted(Comparator.comparing(Unit::getPosition)).collect(
-          Collectors.toCollection(ArrayList::new))) {
-        // make sure a dead unit doesn't take a turn
+      deadUnits.clear();
+      for (Unit unit : unitsCopy.stream().sorted(Comparator.comparing(Unit::getPosition))
+          .collect(
+              Collectors.toCollection(ArrayList::new))) {
+        // make sure a dead unit doesn't take a turn and
+        // also if one unit dies and another one moves into that position it doesn't get executed again
         if (units.stream().filter(u -> u.getPosition().equals(unit.getPosition())).findFirst()
-            .isEmpty()) {
+            .isEmpty() ||
+            deadUnits.stream().filter(u -> u.getPosition().equals(unit.getPosition())).findFirst()
+                .isPresent()) {
           continue;
-        }
-        // The combat is over when there's no enemy around
+        } // The combat is over when there's no enemy around
         UnitType enemyUnitType = unit.getUnitType();
         if (unit.getUnitType() == UnitType.GOBLIN) {
           enemyUnitType = UnitType.ELF;
@@ -296,18 +300,13 @@ class Day15 {
         }
         var enemy = getEnemyToAttack(unit);
         if (enemy.isPresent()) {
-//          System.out.println(
-//              "(" + unit.getPosition().getValue1() + ", " + unit.getPosition().getValue0() + ")"
-//                  + " <-> " + "(" + enemy.get().getPosition().getValue1() + ", " + enemy.get()
-//                  .getPosition().getValue0() + ")");
-          unitAttack(enemy.get());
+          unitAttack(enemy.get(), deadUnits);
           continue;
         }
         var targetInRange = getTargetPositionWithShortestPath(unit);
         if (targetInRange.isEmpty()) {
           continue;
         }
-//        plotAreaWithRelativeDistance(targetInRange.get());
         var position = getNextMoveForUnit(targetInRange.get(), unit);
         if (position.isEmpty()) {
           continue;
@@ -329,21 +328,15 @@ class Day15 {
             .filter(u -> u.getPosition().equals(position.get().getPosition())).findFirst().get();
         Optional<Unit> targetUnit = getEnemyToAttack(currentUnit);
         if (targetUnit.isPresent()) {
-//          System.out.println(
-//              "(" + unit.getPosition().getValue1() + ", " + unit.getPosition().getValue0() + ")"
-//                  + " <-> " + "(" + targetUnit.get().getPosition().getValue1() + ", " + targetUnit
-//                  .get().getPosition().getValue0() + ")");
-          unitAttack(targetUnit.get());
+          unitAttack(targetUnit.get(), deadUnits);
           continue;
         }
       }
-      displayMap();
       round++;
     }
-//    units.stream().forEach(System.out::println);
     return
         units.stream().mapToInt(u -> u.getHp())
-            .peek(e -> System.out.print(e + " ")).reduce(0, (a, x) -> a += x) * (round - 1);
+            .reduce(0, (a, x) -> a += x) * (round - 1);
   }
 
   Optional<Square> getNextMoveForUnit(Square targetInRange, Unit unit) {
