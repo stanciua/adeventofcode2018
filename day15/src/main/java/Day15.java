@@ -41,7 +41,7 @@ class Day15 {
             .collect(Collectors.toCollection(ArrayList::new));
   }
 
-  List<Square> getAdjacentSquares(Square currentSquare) {
+  List<Square> getAdjacentSquares(Square currentSquare, List<Square> area) {
     List<Square> adjacentSquares = new ArrayList<>();
     int i = currentSquare.getPosition().getValue0();
     int j = currentSquare.getPosition().getValue1();
@@ -68,7 +68,7 @@ class Day15 {
     return adjacentSquares;
   }
 
-  List<Square> aStarPathFinding(Square from, Square to) {
+  List<Square> aStarPathFinding(Square from, Square to, List<Square> area) {
     List<Square> path = new ArrayList<>();
     List<Square> openList = new ArrayList<>();
     List<Square> closedList = new ArrayList<>();
@@ -89,7 +89,7 @@ class Day15 {
         Collections.reverse(path);
         return path;
       }
-      List<Square> adjacentSquares = getAdjacentSquares(currentSquare);
+      List<Square> adjacentSquares = getAdjacentSquares(currentSquare, area);
       for (Square square : adjacentSquares) {
         if (closedList.stream()
             .filter(s -> s.getPosition().equals(square.getPosition()))
@@ -130,46 +130,46 @@ class Day15 {
     return Math.abs(x1 - x2) + Math.abs(y1 - y2);
   }
 
-  Square getSquareForUnit(Unit unit) {
+  Square getSquareForUnit(Unit unit, List<Square> area) {
     return area.stream().filter(s -> s.getPosition().equals(unit.getPosition())).findFirst().get();
   }
 
-  List<Square> getTargetsInRangeForUnit(Unit unit) {
+  List<Square> getTargetsInRangeForUnit(Unit unit, List<Unit> units, List<Square> area) {
     List<Square> targetsInRangePositions;
     // find targets in range for each type of unit
     if (unit.getUnitType() == UnitType.ELF) {
       targetsInRangePositions =
           units.stream()
               .filter(u -> u.getUnitType() == UnitType.GOBLIN)
-              .flatMap(u -> getAdjacentSquares(getSquareForUnit(u)).stream())
+              .flatMap(u -> getAdjacentSquares(getSquareForUnit(u, area), area).stream())
               .collect(Collectors.toCollection(ArrayList::new));
     } else {
       targetsInRangePositions =
           units.stream()
               .filter(u -> u.getUnitType() == UnitType.ELF)
-              .flatMap(u -> getAdjacentSquares(getSquareForUnit(u)).stream())
+              .flatMap(u -> getAdjacentSquares(getSquareForUnit(u, area), area).stream())
               .collect(Collectors.toCollection(ArrayList::new));
     }
 
     return targetsInRangePositions;
   }
 
-  Optional<Square> getTargetPositionWithShortestPath(Unit unit) {
+  Optional<Square> getTargetPositionWithShortestPath(Unit unit, List<Unit> units,
+      List<Square> area) {
     List<List<Square>> paths = new ArrayList<>();
-    List<Square> targetsInRangePositions =
-        getTargetsInRangeForUnit(unit).stream()
-            .filter(
-                t -> {
-                  var path = aStarPathFinding(getSquareForUnit(unit), t);
-                  if (path.isEmpty()) {
-                    return false;
-                  } else {
-                    paths.add(path);
-                    return true;
-                  }
-                })
-            .sorted(Comparator.comparing(Square::getPosition))
-            .collect(Collectors.toCollection(ArrayList::new));
+    getTargetsInRangeForUnit(unit, units, area).stream()
+        .filter(
+            t -> {
+              var path = aStarPathFinding(getSquareForUnit(unit, area), t, area);
+              if (path.isEmpty()) {
+                return false;
+              } else {
+                paths.add(path);
+                return true;
+              }
+            })
+        .sorted(Comparator.comparing(Square::getPosition))
+        .collect(Collectors.toCollection(ArrayList::new));
     if (paths.isEmpty()) {
       return Optional.empty();
     }
@@ -198,12 +198,12 @@ class Day15 {
     return Optional.of(winningPath.get(winningPath.size() - 1));
   }
 
-  Optional<Unit> getUnitFromSquare(Square square) {
+  Optional<Unit> getUnitFromSquare(Square square, List<Unit> units) {
     return units.stream().filter(u -> u.getPosition().equals(square.getPosition())).findFirst();
   }
 
-  Optional<Unit> getEnemyToAttack(Unit unit) {
-    Square currentSquare = getSquareForUnit(unit);
+  Optional<Unit> getEnemyToAttack(Unit unit, List<Unit> units, List<Square> area) {
+    Square currentSquare = getSquareForUnit(unit, area);
     int i = currentSquare.getPosition().getValue0();
     int j = currentSquare.getPosition().getValue1();
     char enemy = 'G';
@@ -236,115 +236,131 @@ class Day15 {
 
     int minHP = Integer.MAX_VALUE;
     for (var s : enemies) {
-      Optional<Unit> squareUnit = getUnitFromSquare(s);
+      Optional<Unit> squareUnit = getUnitFromSquare(s, units);
       if (squareUnit.isPresent()) {
         minHP = Integer.min(minHP, squareUnit.get().getHp());
       }
     }
     final int minHPFinal = minHP;
     Optional<Square> target = enemies.stream()
-        .filter(e -> getUnitFromSquare(e).get().getHp() == minHPFinal)
+        .filter(e -> getUnitFromSquare(e, units).get().getHp() == minHPFinal)
         .sorted(Comparator.comparing(Square::getPosition)).findFirst();
     if (target.isPresent()) {
-      return getUnitFromSquare(target.get());
+      return getUnitFromSquare(target.get(), units);
     }
 
     return Optional.empty();
   }
 
-  void unitAttack(Unit unit, List<Unit> deadUnits) {
-    unit.setHp(unit.getHp() - Unit.ATTACK_POWER);
-    if (unit.getHp() <= 0) {
-      deadUnits.add(unit);
+  void unitAttack(Unit enemy, Unit attacker, List<Unit> deadUnits, List<Unit> units,
+      List<Square> area) {
+    enemy.setHp(enemy.getHp() - attacker.getAttackPower());
+    if (enemy.getHp() <= 0) {
+      deadUnits.add(enemy);
       // we need to destroy the Unit
-      units.removeIf(u -> u.getPosition().equals(unit.getPosition()));
+      units.removeIf(u -> u.getPosition().equals(enemy.getPosition()));
       // update the unit position in the map area to '.'
       area.stream()
-          .filter(s -> s.getPosition().equals(unit.getPosition()))
+          .filter(s -> s.getPosition().equals(enemy.getPosition()))
           .forEach(s -> s.setSymbol('.'));
     }
   }
 
-  int getResult1() {
+  boolean simulateRound(List<Unit> units, List<Square> area, List<Unit> deadUnits) {
+    // iterate each unit in  reading order, make a copy in order to preserve positions at the
+    // beginning of the round
+    List<Unit> unitsCopy = new ArrayList<>();
+    units.stream().forEach(u -> unitsCopy.add(new Unit(u)));
+    deadUnits.clear();
+    for (Unit unit : unitsCopy.stream().sorted(Comparator.comparing(Unit::getPosition))
+        .collect(
+            Collectors.toCollection(ArrayList::new))) {
+      // make sure a dead unit doesn't take a turn and
+      // also if one unit dies and another one moves into that position it doesn't get executed again
+      if (units.stream().filter(u -> u.getPosition().equals(unit.getPosition())).findFirst()
+          .isEmpty() ||
+          deadUnits.stream().filter(u -> u.getPosition().equals(unit.getPosition())).findFirst()
+              .isPresent()) {
+        continue;
+      } // The combat is over when there's no enemy around
+      UnitType enemyUnitType = unit.getUnitType();
+      if (unit.getUnitType() == UnitType.GOBLIN) {
+        enemyUnitType = UnitType.ELF;
+      } else {
+        enemyUnitType = UnitType.GOBLIN;
+      }
+
+      final UnitType enemyUnitTypeFinal = enemyUnitType;
+      if (units.stream().filter(u -> u.getUnitType() == enemyUnitTypeFinal).count() == 0) {
+        return true;
+      }
+      var enemy = getEnemyToAttack(unit, units, area);
+      if (enemy.isPresent()) {
+        unitAttack(enemy.get(), unit, deadUnits, units, area);
+        continue;
+      }
+      var targetInRange = getTargetPositionWithShortestPath(unit, units, area);
+      if (targetInRange.isEmpty()) {
+        continue;
+      }
+      var position = getNextMoveForUnit(targetInRange.get(), unit, area);
+      if (position.isEmpty()) {
+        continue;
+      }
+      // update the unit new position
+      units.stream()
+          .filter(u -> u.getPosition().equals(unit.getPosition()))
+          .forEach(newUnit -> newUnit.setPosition(position.get().getPosition()));
+      // update the unit new position in the map area to UnitType: goblin or elf
+      area.stream()
+          .filter(s -> s.getPosition().equals(position.get().getPosition()))
+          .forEach(s -> s.setSymbol(getSquareForUnit(unit, area).getSymbol()));
+      // update the unit old position in the map area to '.'
+      area.stream()
+          .filter(s -> s.getPosition().equals(unit.getPosition()))
+          .forEach(s -> s.setSymbol('.'));
+
+      Unit currentUnit = units.stream()
+          .filter(u -> u.getPosition().equals(position.get().getPosition())).findFirst().get();
+      Optional<Unit> targetUnit = getEnemyToAttack(currentUnit, units, area);
+      if (targetUnit.isPresent()) {
+        unitAttack(targetUnit.get(), currentUnit, deadUnits, units, area);
+        continue;
+      }
+    }
+    return false;
+  }
+
+  int simulateBattle(List<Unit> units, List<Square> area) {
     int round = 0;
     List<Unit> deadUnits = new ArrayList<>();
-    completed:
     while (true) {
-      // iterate each unit in  reading order, make a copy in order to preserve positions at the
-      // beginning of the round
-      List<Unit> unitsCopy = new ArrayList<>();
-      units.stream().forEach(u -> unitsCopy.add(new Unit(u)));
-      deadUnits.clear();
-      for (Unit unit : unitsCopy.stream().sorted(Comparator.comparing(Unit::getPosition))
-          .collect(
-              Collectors.toCollection(ArrayList::new))) {
-        // make sure a dead unit doesn't take a turn and
-        // also if one unit dies and another one moves into that position it doesn't get executed again
-        if (units.stream().filter(u -> u.getPosition().equals(unit.getPosition())).findFirst()
-            .isEmpty() ||
-            deadUnits.stream().filter(u -> u.getPosition().equals(unit.getPosition())).findFirst()
-                .isPresent()) {
-          continue;
-        } // The combat is over when there's no enemy around
-        UnitType enemyUnitType = unit.getUnitType();
-        if (unit.getUnitType() == UnitType.GOBLIN) {
-          enemyUnitType = UnitType.ELF;
-        } else {
-          enemyUnitType = UnitType.GOBLIN;
-        }
-
-        final UnitType enemyUnitTypeFinal = enemyUnitType;
-        if (units.stream().filter(u -> u.getUnitType() == enemyUnitTypeFinal).count() == 0) {
-          round++;
-          break completed;
-        }
-        var enemy = getEnemyToAttack(unit);
-        if (enemy.isPresent()) {
-          unitAttack(enemy.get(), deadUnits);
-          continue;
-        }
-        var targetInRange = getTargetPositionWithShortestPath(unit);
-        if (targetInRange.isEmpty()) {
-          continue;
-        }
-        var position = getNextMoveForUnit(targetInRange.get(), unit);
-        if (position.isEmpty()) {
-          continue;
-        }
-        // update the unit new position
-        units.stream()
-            .filter(u -> u.getPosition().equals(unit.getPosition()))
-            .forEach(newUnit -> newUnit.setPosition(position.get().getPosition()));
-        // update the unit new position in the map area to UnitType: goblin or elf
-        area.stream()
-            .filter(s -> s.getPosition().equals(position.get().getPosition()))
-            .forEach(s -> s.setSymbol(getSquareForUnit(unit).getSymbol()));
-        // update the unit old position in the map area to '.'
-        area.stream()
-            .filter(s -> s.getPosition().equals(unit.getPosition()))
-            .forEach(s -> s.setSymbol('.'));
-
-        Unit currentUnit = units.stream()
-            .filter(u -> u.getPosition().equals(position.get().getPosition())).findFirst().get();
-        Optional<Unit> targetUnit = getEnemyToAttack(currentUnit);
-        if (targetUnit.isPresent()) {
-          unitAttack(targetUnit.get(), deadUnits);
-          continue;
-        }
+      if (!simulateRound(units, area, deadUnits)) {
+        round++;
+        continue;
       }
       round++;
+      break;
     }
     return
         units.stream().mapToInt(u -> u.getHp())
             .reduce(0, (a, x) -> a += x) * (round - 1);
   }
 
-  Optional<Square> getNextMoveForUnit(Square targetInRange, Unit unit) {
-    List<Square> adjacentSquares = getAdjacentSquares(getSquareForUnit(unit));
+  int getResult1() {
+    List<Unit> unitsCopy = units.stream().map(u -> new Unit(u))
+        .collect(Collectors.toCollection(ArrayList::new));
+    List<Square> areaCopy = area.stream().map(s -> new Square(s))
+        .collect(Collectors.toCollection(ArrayList::new));
+    return simulateBattle(unitsCopy, areaCopy);
+  }
+
+  Optional<Square> getNextMoveForUnit(Square targetInRange, Unit unit, List<Square> area) {
+    List<Square> adjacentSquares = getAdjacentSquares(getSquareForUnit(unit, area), area);
     // if we have more then one path to the target we need to select one that is first in
     // reading order
     List<List<Square>> paths = new ArrayList<>();
-    adjacentSquares.stream().forEach(p -> paths.add(aStarPathFinding(p, targetInRange)));
+    adjacentSquares.stream().forEach(p -> paths.add(aStarPathFinding(p, targetInRange, area)));
     int minDistance = Integer.MAX_VALUE;
     List<Pair<Square, Integer>> adjacentSquareDistances = new ArrayList<>();
     for (var path : paths) {
@@ -373,11 +389,11 @@ class Day15 {
     }
   }
 
-  void plotAreaWithRelativeDistance(Square targetInRange) {
+  void plotAreaWithRelativeDistance(Square targetInRange, List<Square> area) {
     List<List<Square>> paths = new ArrayList<>();
     dots.stream()
         .filter(d -> !targetInRange.getPosition().equals(d.getPosition()))
-        .forEach(d -> paths.add(aStarPathFinding(d, targetInRange)));
+        .forEach(d -> paths.add(aStarPathFinding(d, targetInRange, area)));
     List<Square> newArea = new ArrayList<>();
     area.stream().forEach(s -> newArea.add(new Square(s)));
     for (var path : paths) {
@@ -403,7 +419,41 @@ class Day15 {
   }
 
   int getResult2() {
-    return -1;
+    int elfAttackPower = 4;
+    long numberOfElfs = units.stream().filter(u -> u.getUnitType() == UnitType.ELF).count();
+    int result = 0;
+    victoryWithoutCasualties:
+    while (true) {
+      List<Unit> deadUnits = new ArrayList<>();
+      List<Unit> unitsCopy = units.stream().map(u -> new Unit(u))
+          .collect(Collectors.toCollection(ArrayList::new));
+      List<Square> areaCopy = area.stream().map(s -> new Square(s))
+          .collect(Collectors.toCollection(ArrayList::new));
+      final int elfAttackPowerFinal = elfAttackPower;
+      unitsCopy.stream().filter(u -> u.getUnitType() == UnitType.ELF)
+          .forEach(u -> u.setAttackPower(elfAttackPowerFinal));
+      int round = 0;
+      victoryWithCasualties:
+      while (true) {
+        boolean isBattleDone = simulateRound(unitsCopy, areaCopy, deadUnits);
+        long currentNumberOfElfs = unitsCopy.stream().filter(u -> u.getUnitType() == UnitType.ELF)
+            .count();
+        round++;
+        if (currentNumberOfElfs != numberOfElfs) {
+          elfAttackPower++;
+          continue victoryWithoutCasualties;
+        }
+        if (!isBattleDone) {
+          continue victoryWithCasualties;
+        }
+
+        result =
+            unitsCopy.stream().filter(u -> u.getUnitType() == UnitType.ELF).mapToInt(u -> u.getHp())
+                .reduce(0, (a, x) -> a += x) * (round -1);
+        break victoryWithoutCasualties;
+      }
+    }
+    return result;
   }
 
   static class Square {
@@ -510,10 +560,21 @@ class Day15 {
 
     int hp;
 
+    public int getAttackPower() {
+      return attackPower;
+    }
+
+    public void setAttackPower(int attackPower) {
+      this.attackPower = attackPower;
+    }
+
+    int attackPower;
+
     public Unit(Unit unit) {
       this.hp = unit.hp;
       this.position = unit.position;
       this.unitType = unit.unitType;
+      this.attackPower = unit.attackPower;
     }
 
     public int getHp() {
@@ -542,13 +603,19 @@ class Day15 {
 
     @Override
     public String toString() {
-      return "Unit{" + "hp=" + hp + ", position=" + position + ", unitType=" + unitType + '}';
+      return "Unit{" +
+          "hp=" + hp +
+          ", attackPower=" + attackPower +
+          ", position=" + position +
+          ", unitType=" + unitType +
+          '}';
     }
 
     public Unit(Pair<Integer, Integer> position, UnitType unitType) {
       this.position = position;
       this.unitType = unitType;
       this.hp = INITIAL_HP;
+      this.attackPower = ATTACK_POWER;
     }
 
     public static final int ATTACK_POWER = 3;
