@@ -1,22 +1,23 @@
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.javatuples.Pair;
 
 class Day15 {
 
-  List<Square> area;
-  List<Unit> units;
-  List<Square> dots;
-  final int n;
-  final int m;
+  private List<Square> area;
+  private List<Unit> units;
+  private final int columns;
 
   Day15() throws Exception {
     String[] lines = Files.lines(Path.of("src/test/java/input.txt")).toArray(String[]::new);
-    n = lines.length;
-    m = lines[0].length();
+    columns = lines[0].length();
     area = new ArrayList<>();
     IntStream.range(0, lines.length)
         .forEach(
@@ -34,49 +35,44 @@ class Day15 {
         units.add(elf);
       }
     }
-
-    dots =
-        area.stream()
-            .filter(d -> d.getSymbol() == '.')
-            .collect(Collectors.toCollection(ArrayList::new));
   }
 
-  List<Square> getAdjacentSquares(Square currentSquare, List<Square> area) {
+  private List<Square> getAdjacentSquares(Square currentSquare, List<Square> area) {
     List<Square> adjacentSquares = new ArrayList<>();
     int i = currentSquare.getPosition().getValue0();
     int j = currentSquare.getPosition().getValue1();
     // up
-    Square square = area.get((i - 1) * m + j);
+    Square square = area.get((i - 1) * columns + j);
     if (square.getSymbol() == '.') {
       adjacentSquares.add(square);
     }
     // left
-    square = area.get(i * m + (j - 1));
+    square = area.get(i * columns + (j - 1));
     if (square.getSymbol() == '.') {
       adjacentSquares.add(square);
     }
     // right
-    square = area.get(i * m + (j + 1));
+    square = area.get(i * columns + (j + 1));
     if (square.getSymbol() == '.') {
       adjacentSquares.add(square);
     }
     // down
-    square = area.get((i + 1) * m + j);
+    square = area.get((i + 1) * columns + j);
     if (square.getSymbol() == '.') {
       adjacentSquares.add(square);
     }
     return adjacentSquares;
   }
 
-  List<Square> aStarPathFinding(Square from, Square to, List<Square> area) {
+  private List<Square> pathFinding(Square from, Square to, List<Square> area) {
     List<Square> path = new ArrayList<>();
     List<Square> openList = new ArrayList<>();
     List<Square> closedList = new ArrayList<>();
     openList.add(from);
-    area.stream().forEach(s -> s.resetState());
+    area.forEach(Square::resetState);
     while (!openList.isEmpty()) {
       Square currentSquare =
-          openList.stream().sorted(Comparator.comparing(Square::getF)).findFirst().get();
+          openList.stream().min(Comparator.comparing(Square::getHeuristic)).get();
       openList.remove(currentSquare);
       closedList.add(currentSquare);
 
@@ -89,25 +85,24 @@ class Day15 {
         Collections.reverse(path);
         return path;
       }
+
       List<Square> adjacentSquares = getAdjacentSquares(currentSquare, area);
       for (Square square : adjacentSquares) {
         if (closedList.stream()
-            .filter(s -> s.getPosition().equals(square.getPosition()))
-            .findFirst()
-            .isPresent()) {
+            .anyMatch(s -> s.getPosition().equals(square.getPosition()))) {
           continue;
         }
 
-        square.setG(currentSquare.getG() + 1);
-        square.setH(manhattanDistance(square, to));
-        square.setF(square.getG() + square.getH());
+        square.setDistance(currentSquare.getDistance() + 1);
+        square.setManhattanDistance(manhattanDistance(square, to));
+        square.setHeuristic(square.getDistance() + square.getManhattanDistance());
 
         Optional<Square> openListSquareOptional =
             openList.stream().filter(s -> s.getPosition().equals(square.getPosition())).findFirst();
         if (openListSquareOptional.isPresent()) {
           Square openListSquare = openListSquareOptional.get();
-          int squareG = openListSquare.getG();
-          if (square.getG() > squareG) {
+          int squareG = openListSquare.getDistance();
+          if (square.getDistance() > squareG) {
             continue;
           }
         }
@@ -121,7 +116,7 @@ class Day15 {
     return path;
   }
 
-  int manhattanDistance(Square from, Square to) {
+  private int manhattanDistance(Square from, Square to) {
     int x1 = from.getPosition().getValue0();
     int y1 = from.getPosition().getValue1();
     int x2 = to.getPosition().getValue0();
@@ -130,11 +125,12 @@ class Day15 {
     return Math.abs(x1 - x2) + Math.abs(y1 - y2);
   }
 
-  Square getSquareForUnit(Unit unit, List<Square> area) {
-    return area.stream().filter(s -> s.getPosition().equals(unit.getPosition())).findFirst().get();
+  private Square getSquareForUnit(Unit unit, List<Square> area) {
+    return area.stream().filter(s -> s.getPosition().equals(unit.getPosition())).findFirst()
+        .orElseThrow();
   }
 
-  List<Square> getTargetsInRangeForUnit(Unit unit, List<Unit> units, List<Square> area) {
+  private List<Square> getTargetsInRangeForUnit(Unit unit, List<Unit> units, List<Square> area) {
     List<Square> targetsInRangePositions;
     // find targets in range for each type of unit
     if (unit.getUnitType() == UnitType.ELF) {
@@ -154,31 +150,24 @@ class Day15 {
     return targetsInRangePositions;
   }
 
-  Optional<Square> getTargetPositionWithShortestPath(Unit unit, List<Unit> units,
+  private Optional<Square> getTargetPositionWithShortestPath(Unit unit, List<Unit> units,
       List<Square> area) {
     List<List<Square>> paths = new ArrayList<>();
-    getTargetsInRangeForUnit(unit, units, area).stream()
-        .filter(
-            t -> {
-              var path = aStarPathFinding(getSquareForUnit(unit, area), t, area);
-              if (path.isEmpty()) {
-                return false;
-              } else {
-                paths.add(path);
-                return true;
-              }
-            })
-        .sorted(Comparator.comparing(Square::getPosition))
-        .collect(Collectors.toCollection(ArrayList::new));
+    for (var t : getTargetsInRangeForUnit(unit, units, area)) {
+      var path = pathFinding(getSquareForUnit(unit, area), t, area);
+      if (path.isEmpty()) {
+        continue;
+      }
+      paths.add(path);
+    }
+
     if (paths.isEmpty()) {
       return Optional.empty();
     }
     int shortestDistance = Integer.MAX_VALUE;
-    List<Square> shortestPath = paths.get(0);
     for (List<Square> path : paths) {
-      int lastElementDistance = path.get(path.size() - 1).getG();
+      int lastElementDistance = path.get(path.size() - 1).getDistance();
       if (lastElementDistance < shortestDistance) {
-        shortestPath = path;
         shortestDistance = lastElementDistance;
       }
     }
@@ -187,72 +176,64 @@ class Day15 {
     // need to check if we have more than one path with the same distance to unit
     List<List<Square>> sameDistancePaths =
         paths.stream()
-            .filter(path -> path.get(path.size() - 1).getG() == shortest)
+            .filter(path -> path.get(path.size() - 1).getDistance() == shortest).sorted(
+            Comparator.comparing(p -> p.get(p.size() - 1).getPosition()))
             .collect(Collectors.toCollection(ArrayList::new));
-    sameDistancePaths.sort(
-        (p1, p2) ->
-            p1.get(p1.size() - 1).getPosition().compareTo(p2.get(p2.size() - 1).getPosition()));
     // the next position for the unit to move is the first path in the list of paths and
     // the second position from the choose path
     List<Square> winningPath = sameDistancePaths.get(0);
     return Optional.of(winningPath.get(winningPath.size() - 1));
   }
 
-  Optional<Unit> getUnitFromSquare(Square square, List<Unit> units) {
-    return units.stream().filter(u -> u.getPosition().equals(square.getPosition())).findFirst();
+  private Unit getUnitFromSquare(Square square, List<Unit> units) {
+    return units.stream().filter(u -> u.getPosition().equals(square.getPosition())).findFirst()
+        .orElseThrow();
   }
 
-  Optional<Unit> getEnemyToAttack(Unit unit, List<Unit> units, List<Square> area) {
+  private Optional<Unit> getEnemyToAttack(Unit unit, List<Unit> units, List<Square> area) {
     Square currentSquare = getSquareForUnit(unit, area);
     int i = currentSquare.getPosition().getValue0();
     int j = currentSquare.getPosition().getValue1();
     char enemy = 'G';
     if (unit.getUnitType() == UnitType.GOBLIN) {
       enemy = 'E';
-    } else {
-      enemy = 'G';
     }
     List<Square> enemies = new ArrayList<>();
     // up
-    Square square = area.get((i - 1) * m + j);
+    Square square = area.get((i - 1) * columns + j);
     if (square.getSymbol() == enemy) {
       enemies.add(square);
     }
     // left
-    square = area.get(i * m + (j - 1));
+    square = area.get(i * columns + (j - 1));
     if (square.getSymbol() == enemy) {
       enemies.add(square);
     }
     // right
-    square = area.get(i * m + (j + 1));
+    square = area.get(i * columns + (j + 1));
     if (square.getSymbol() == enemy) {
       enemies.add(square);
     }
     // down
-    square = area.get((i + 1) * m + j);
+    square = area.get((i + 1) * columns + j);
     if (square.getSymbol() == enemy) {
       enemies.add(square);
     }
 
     int minHP = Integer.MAX_VALUE;
     for (var s : enemies) {
-      Optional<Unit> squareUnit = getUnitFromSquare(s, units);
-      if (squareUnit.isPresent()) {
-        minHP = Integer.min(minHP, squareUnit.get().getHp());
-      }
+      Unit squareUnit = getUnitFromSquare(s, units);
+      minHP = Integer.min(minHP, squareUnit.getHp());
     }
-    final int minHPFinal = minHP;
+    final int minHpFinal = minHP;
     Optional<Square> target = enemies.stream()
-        .filter(e -> getUnitFromSquare(e, units).get().getHp() == minHPFinal)
-        .sorted(Comparator.comparing(Square::getPosition)).findFirst();
-    if (target.isPresent()) {
-      return getUnitFromSquare(target.get(), units);
-    }
+        .filter(e -> getUnitFromSquare(e, units).getHp() == minHpFinal)
+        .min(Comparator.comparing(Square::getPosition));
+    return target.flatMap(square1 -> Optional.of(getUnitFromSquare(square1, units)));
 
-    return Optional.empty();
   }
 
-  void unitAttack(Unit enemy, Unit attacker, List<Unit> deadUnits, List<Unit> units,
+  private void unitAttack(Unit enemy, Unit attacker, List<Unit> deadUnits, List<Unit> units,
       List<Square> area) {
     enemy.setHp(enemy.getHp() - attacker.getAttackPower());
     if (enemy.getHp() <= 0) {
@@ -266,24 +247,23 @@ class Day15 {
     }
   }
 
-  boolean simulateRound(List<Unit> units, List<Square> area, List<Unit> deadUnits) {
+  private boolean simulateRound(List<Unit> units, List<Square> area, List<Unit> deadUnits) {
     // iterate each unit in  reading order, make a copy in order to preserve positions at the
     // beginning of the round
     List<Unit> unitsCopy = new ArrayList<>();
-    units.stream().forEach(u -> unitsCopy.add(new Unit(u)));
+    units.forEach(u -> unitsCopy.add(new Unit(u)));
     deadUnits.clear();
     for (Unit unit : unitsCopy.stream().sorted(Comparator.comparing(Unit::getPosition))
         .collect(
             Collectors.toCollection(ArrayList::new))) {
-      // make sure a dead unit doesn't take a turn and
-      // also if one unit dies and another one moves into that position it doesn't get executed again
+      // make sure a dead unit doesn't take a turn, also if one unit dies and another one moves into
+      // that position it doesn't get executed again
       if (units.stream().filter(u -> u.getPosition().equals(unit.getPosition())).findFirst()
-          .isEmpty() ||
-          deadUnits.stream().filter(u -> u.getPosition().equals(unit.getPosition())).findFirst()
-              .isPresent()) {
+          .isEmpty()
+          || deadUnits.stream().anyMatch(u -> u.getPosition().equals(unit.getPosition()))) {
         continue;
       } // The combat is over when there's no enemy around
-      UnitType enemyUnitType = unit.getUnitType();
+      UnitType enemyUnitType;
       if (unit.getUnitType() == UnitType.GOBLIN) {
         enemyUnitType = UnitType.ELF;
       } else {
@@ -291,7 +271,7 @@ class Day15 {
       }
 
       final UnitType enemyUnitTypeFinal = enemyUnitType;
-      if (units.stream().filter(u -> u.getUnitType() == enemyUnitTypeFinal).count() == 0) {
+      if (units.stream().noneMatch(u -> u.getUnitType() == enemyUnitTypeFinal)) {
         return true;
       }
       var enemy = getEnemyToAttack(unit, units, area);
@@ -321,17 +301,14 @@ class Day15 {
           .forEach(s -> s.setSymbol('.'));
 
       Unit currentUnit = units.stream()
-          .filter(u -> u.getPosition().equals(position.get().getPosition())).findFirst().get();
+          .filter(u -> u.getPosition().equals(position.get().getPosition())).findFirst().orElseThrow();
       Optional<Unit> targetUnit = getEnemyToAttack(currentUnit, units, area);
-      if (targetUnit.isPresent()) {
-        unitAttack(targetUnit.get(), currentUnit, deadUnits, units, area);
-        continue;
-      }
+      targetUnit.ifPresent(unit1 -> unitAttack(unit1, currentUnit, deadUnits, units, area));
     }
     return false;
   }
 
-  int simulateBattle(List<Unit> units, List<Square> area) {
+  private int simulateBattle(List<Unit> units, List<Square> area) {
     int round = 0;
     List<Unit> deadUnits = new ArrayList<>();
     while (true) {
@@ -343,31 +320,31 @@ class Day15 {
       break;
     }
     return
-        units.stream().mapToInt(u -> u.getHp())
+        units.stream().mapToInt(Unit::getHp)
             .reduce(0, (a, x) -> a += x) * (round - 1);
   }
 
   int getResult1() {
-    List<Unit> unitsCopy = units.stream().map(u -> new Unit(u))
+    List<Unit> unitsCopy = units.stream().map(Unit::new)
         .collect(Collectors.toCollection(ArrayList::new));
-    List<Square> areaCopy = area.stream().map(s -> new Square(s))
+    List<Square> areaCopy = area.stream().map(Square::new)
         .collect(Collectors.toCollection(ArrayList::new));
     return simulateBattle(unitsCopy, areaCopy);
   }
 
-  Optional<Square> getNextMoveForUnit(Square targetInRange, Unit unit, List<Square> area) {
+  private Optional<Square> getNextMoveForUnit(Square targetInRange, Unit unit, List<Square> area) {
     List<Square> adjacentSquares = getAdjacentSquares(getSquareForUnit(unit, area), area);
     // if we have more then one path to the target we need to select one that is first in
     // reading order
     List<List<Square>> paths = new ArrayList<>();
-    adjacentSquares.stream().forEach(p -> paths.add(aStarPathFinding(p, targetInRange, area)));
+    adjacentSquares.forEach(p -> paths.add(pathFinding(p, targetInRange, area)));
     int minDistance = Integer.MAX_VALUE;
     List<Pair<Square, Integer>> adjacentSquareDistances = new ArrayList<>();
     for (var path : paths) {
       if (path.isEmpty()) {
         continue;
       }
-      int distance = path.get(path.size() - 1).getG();
+      int distance = path.get(path.size() - 1).getDistance();
       adjacentSquareDistances.add(new Pair<>(path.get(0), distance));
       minDistance = Integer.min(distance, minDistance);
     }
@@ -375,65 +352,24 @@ class Day15 {
     return adjacentSquareDistances.stream()
         .filter(p -> p.getValue1() == minDistanceFinal)
         .sorted(Comparator.comparing(Pair::getValue1))
-        .map(p -> p.getValue0())
-        .sorted(Comparator.comparing(Square::getPosition))
-        .findFirst();
-  }
-
-  void displayMap() {
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < m; j++) {
-        System.out.print(area.get(i * m + j).getSymbol() + " ");
-      }
-      System.out.println();
-    }
-  }
-
-  void plotAreaWithRelativeDistance(Square targetInRange, List<Square> area) {
-    List<List<Square>> paths = new ArrayList<>();
-    dots.stream()
-        .filter(d -> !targetInRange.getPosition().equals(d.getPosition()))
-        .forEach(d -> paths.add(aStarPathFinding(d, targetInRange, area)));
-    List<Square> newArea = new ArrayList<>();
-    area.stream().forEach(s -> newArea.add(new Square(s)));
-    for (var path : paths) {
-      if (path.isEmpty()) {
-        continue;
-      }
-      Pair<Integer, Integer> first = path.get(0).getPosition();
-      Pair<Integer, Integer> last = path.get(path.size() - 1).getPosition();
-      int fi = first.getValue0();
-      int fj = first.getValue1();
-      int li = last.getValue0();
-      int lj = last.getValue1();
-
-      newArea.get(m * fi + fj).setSymbol(Character.forDigit(path.get(path.size() - 1).getG(), 10));
-      newArea.get(m * li + lj).setSymbol(Character.forDigit(path.get(0).getG(), 10));
-    }
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < m; j++) {
-        System.out.print(newArea.get(i * m + j).getSymbol() + " ");
-      }
-      System.out.println();
-    }
+        .map(Pair::getValue0).min(Comparator.comparing(Square::getPosition));
   }
 
   int getResult2() {
     int elfAttackPower = 4;
     long numberOfElfs = units.stream().filter(u -> u.getUnitType() == UnitType.ELF).count();
-    int result = 0;
+    int result;
     victoryWithoutCasualties:
     while (true) {
       List<Unit> deadUnits = new ArrayList<>();
-      List<Unit> unitsCopy = units.stream().map(u -> new Unit(u))
+      List<Unit> unitsCopy = units.stream().map(Unit::new)
           .collect(Collectors.toCollection(ArrayList::new));
-      List<Square> areaCopy = area.stream().map(s -> new Square(s))
+      List<Square> areaCopy = area.stream().map(Square::new)
           .collect(Collectors.toCollection(ArrayList::new));
       final int elfAttackPowerFinal = elfAttackPower;
       unitsCopy.stream().filter(u -> u.getUnitType() == UnitType.ELF)
           .forEach(u -> u.setAttackPower(elfAttackPowerFinal));
       int round = 0;
-      victoryWithCasualties:
       while (true) {
         boolean isBattleDone = simulateRound(unitsCopy, areaCopy, deadUnits);
         long currentNumberOfElfs = unitsCopy.stream().filter(u -> u.getUnitType() == UnitType.ELF)
@@ -444,12 +380,12 @@ class Day15 {
           continue victoryWithoutCasualties;
         }
         if (!isBattleDone) {
-          continue victoryWithCasualties;
+          continue;
         }
 
         result =
-            unitsCopy.stream().filter(u -> u.getUnitType() == UnitType.ELF).mapToInt(u -> u.getHp())
-                .reduce(0, (a, x) -> a += x) * (round -1);
+            unitsCopy.stream().filter(u -> u.getUnitType() == UnitType.ELF).mapToInt(Unit::getHp)
+                .reduce(0, (a, x) -> a += x) * (round - 1);
         break victoryWithoutCasualties;
       }
     }
@@ -458,34 +394,31 @@ class Day15 {
 
   static class Square {
 
-    int g;
+    int distance;
     Square parent;
 
-    public Square getParent() {
-      return parent;
-    }
-
-    public Square(Square from) {
+    Square(Square from) {
       this.position = from.position;
       this.symbol = from.symbol;
-      this.g = from.g;
-      this.f = from.f;
-      this.h = from.h;
+      this.distance = from.distance;
+      this.heuristic = from.heuristic;
+      this.manhattanDistance = from.manhattanDistance;
+      this.parent = from.parent;
     }
 
-    public void setParent(Square parent) {
+    void setParent(Square parent) {
       this.parent = parent;
     }
 
     @Override
     public String toString() {
       return "Square{"
-          + "g="
-          + g
-          + ", h="
-          + h
-          + ", f="
-          + f
+          + "distance="
+          + distance
+          + ", manhattanDistance="
+          + manhattanDistance
+          + ", heuristic="
+          + heuristic
           + ", position="
           + position
           + ", symbol="
@@ -493,66 +426,62 @@ class Day15 {
           + '}';
     }
 
-    public Square(Pair<Integer, Integer> position, char symbol) {
+    Square(Pair<Integer, Integer> position, char symbol) {
       this.position = position;
       this.symbol = symbol;
-      this.g = 0;
-      this.f = 0;
-      this.h = 0;
+      this.distance = 0;
+      this.heuristic = 0;
+      this.manhattanDistance = 0;
       this.parent = null;
     }
 
-    public void resetState() {
-      this.g = 0;
-      this.f = 0;
-      this.h = 0;
+    void resetState() {
+      this.distance = 0;
+      this.heuristic = 0;
+      this.manhattanDistance = 0;
       this.parent = null;
     }
 
-    public int getG() {
-      return g;
+    int getDistance() {
+      return distance;
     }
 
-    public void setG(int g) {
-      this.g = g;
+    void setDistance(int distance) {
+      this.distance = distance;
     }
 
-    public int getH() {
-      return h;
+    int getManhattanDistance() {
+      return manhattanDistance;
     }
 
-    public void setH(int h) {
-      this.h = h;
+    void setManhattanDistance(int manhattanDistance) {
+      this.manhattanDistance = manhattanDistance;
     }
 
-    public int getF() {
-      return f;
+    int getHeuristic() {
+      return heuristic;
     }
 
-    public void setF(int f) {
-      this.f = f;
+    void setHeuristic(int heuristic) {
+      this.heuristic = heuristic;
     }
 
-    public Pair<Integer, Integer> getPosition() {
+    Pair<Integer, Integer> getPosition() {
       return position;
     }
 
-    public void setPosition(Pair<Integer, Integer> position) {
-      this.position = position;
-    }
+    int manhattanDistance;
 
-    int h;
-
-    public char getSymbol() {
+    char getSymbol() {
       return symbol;
     }
 
-    public void setSymbol(char symbol) {
+    void setSymbol(char symbol) {
       this.symbol = symbol;
     }
 
-    int f;
-    Pair<Integer, Integer> position;
+    int heuristic;
+    final Pair<Integer, Integer> position;
     char symbol;
   }
 
@@ -560,68 +489,64 @@ class Day15 {
 
     int hp;
 
-    public int getAttackPower() {
+    int getAttackPower() {
       return attackPower;
     }
 
-    public void setAttackPower(int attackPower) {
+    void setAttackPower(int attackPower) {
       this.attackPower = attackPower;
     }
 
     int attackPower;
 
-    public Unit(Unit unit) {
+    Unit(Unit unit) {
       this.hp = unit.hp;
       this.position = unit.position;
       this.unitType = unit.unitType;
       this.attackPower = unit.attackPower;
     }
 
-    public int getHp() {
+    int getHp() {
       return hp;
     }
 
-    public void setHp(int hp) {
+    void setHp(int hp) {
       this.hp = hp;
     }
 
-    public Pair<Integer, Integer> getPosition() {
+    Pair<Integer, Integer> getPosition() {
       return position;
     }
 
-    public void setPosition(Pair<Integer, Integer> position) {
+    void setPosition(Pair<Integer, Integer> position) {
       this.position = position;
     }
 
-    public UnitType getUnitType() {
+    UnitType getUnitType() {
       return unitType;
-    }
-
-    public void setUnitType(UnitType unitType) {
-      this.unitType = unitType;
     }
 
     @Override
     public String toString() {
-      return "Unit{" +
-          "hp=" + hp +
-          ", attackPower=" + attackPower +
-          ", position=" + position +
-          ", unitType=" + unitType +
-          '}';
+      return "Unit{"
+          + "hp=" + hp
+          + ", attackPower=" + attackPower
+          + ", position=" + position
+          + ", unitType=" + unitType
+          + '}';
     }
 
-    public Unit(Pair<Integer, Integer> position, UnitType unitType) {
+    Unit(Pair<Integer, Integer> position, UnitType unitType) {
       this.position = position;
       this.unitType = unitType;
       this.hp = INITIAL_HP;
       this.attackPower = ATTACK_POWER;
     }
 
-    public static final int ATTACK_POWER = 3;
-    public static final int INITIAL_HP = 200;
+    static final int ATTACK_POWER = 3;
+    static final int INITIAL_HP = 200;
     Pair<Integer, Integer> position;
-    UnitType unitType;
+    final UnitType unitType;
   }
 
   enum UnitType {
