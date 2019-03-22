@@ -1,20 +1,12 @@
 import org.javatuples.Pair;
 
-import javax.sound.midi.SysexMessage;
-import java.nio.file.DirectoryIteratorException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 class Day17 {
@@ -94,18 +86,87 @@ class Day17 {
       System.out.println();
     }
   }
+  
+  void getClayCorners(List<Pair<Integer, Integer>> leftCorners, List<Pair<Integer, Integer>> rightCorners) {
+    int height = slice2D.length;
+    int width = slice2D[0].length;
+    
+    for (int i = 0; i < height; i++) {
+      for (int j = 0; j < width; j++) {
+        char square = slice2D[i][j];
+        
+        if (square == '#' && i - 1 >= 0 && j + 1 < width && slice2D[i - 1][j + 1] == '#') {
+          leftCorners.add(new Pair<>(i - 1, j + 1));
+        }
+        if (square == '#' && i - 1 >= 0 && j - 1 < width && slice2D[i - 1][j - 1] == '#') {
+          rightCorners.add(new Pair<>(i - 1, j - 1));
+        }
+      }
+    }
+  }
+  
+  void buildClayList(List<Clay> clays, List<Pair<Integer, Integer>> leftCorners, List<Pair<Integer, Integer>> rightCorners) {
+   for (var leftCorner: leftCorners) {
+     for (var rightCorner: rightCorners) {
+       if (leftCorner.getValue0() == rightCorner.getValue0()) {
+         
+       }
+     }
+   }
+  }
+  
+  static class Clay {
+
+    @Override
+    public String toString() {
+      return "Clay{" +
+          "upperLeft=" + upperLeft +
+          ", upperRight=" + upperRight +
+          ", downLeft=" + downLeft +
+          ", downRight=" + downRight +
+          '}';
+    }
+
+    public Pair<Integer, Integer> getUpperLeft() {
+      return upperLeft;
+    }
+
+    public void setUpperLeft(Pair<Integer, Integer> upperLeft) {
+      this.upperLeft = upperLeft;
+    }
+
+    public Pair<Integer, Integer> getUpperRight() {
+      return upperRight;
+    }
+
+    public void setUpperRight(Pair<Integer, Integer> upperRight) {
+      this.upperRight = upperRight;
+    }
+
+    public Pair<Integer, Integer> getDownLeft() {
+      return downLeft;
+    }
+
+    public void setDownLeft(Pair<Integer, Integer> downLeft) {
+      this.downLeft = downLeft;
+    }
+
+    public Pair<Integer, Integer> getDownRight() {
+      return downRight;
+    }
+
+    public void setDownRight(Pair<Integer, Integer> downRight) {
+      this.downRight = downRight;
+    }
+
+    private Pair<Integer, Integer> upperLeft;
+    private Pair<Integer, Integer> upperRight;
+    private Pair<Integer, Integer> downLeft;
+    private Pair<Integer, Integer> downRight;
+  }
+  
 
   int getResult1() {
-    List<Square> waterFlow = new ArrayList<>();
-    waterFlow.add(new Square(new Pair<>(500, 1)));
-    Square lastSquare = waterFlow.get(waterFlow.size() - 1);
-    lastSquare.setDirection(Direction.DOWN);
-    lastSquare.setSymbol('|');
-    while (lastSquare.getPosition().getValue0() >= 1
-        && lastSquare.getPosition().getValue0() < slice2D.length) {
-      Square nextSquare = getNextSquareInWaterflow(lastSquare);
-      break;
-    }
     return -1;
   }
   
