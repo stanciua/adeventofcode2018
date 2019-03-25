@@ -30,7 +30,7 @@ class Day18 {
         }
     }
 
-    List<Character> getAdjacentAcres(char[][] area, int x, int y) {
+    List<Character> getAdjacentAcres(char[][] area, int y, int x) {
         List<Character> adjacentAcres = new ArrayList<>();
         // up
         if (y - 1 >= 0) {
@@ -95,10 +95,20 @@ class Day18 {
                 }
             }
             area = areaCopy;
-            displayArea();
-            System.out.println();
         }
-        return -1;
+        int lumberyards = 0;
+        int woodedAcres = 0;
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+               if (area[i][j] == '#') {
+                   lumberyards++;
+               }
+                if (area[i][j] == '|') {
+                    woodedAcres++;
+                }
+            }
+        }
+        return lumberyards * woodedAcres;
     }
 
     int getResult2() {
