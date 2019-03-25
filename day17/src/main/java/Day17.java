@@ -75,7 +75,7 @@ class Day17 {
     // initialize the clay cells with '#'
     clayLocations.stream().forEach(c -> slice2D[c.getValue0()][c.getValue1()] = '#');
 
-    displaySlice2D();
+    //    displaySlice2D();
   }
 
   void displaySlice2D() {
@@ -86,45 +86,124 @@ class Day17 {
       System.out.println();
     }
   }
-  
-  void getClayCorners(List<Pair<Integer, Integer>> leftCorners, List<Pair<Integer, Integer>> rightCorners) {
+
+  void getClayCorners(
+      List<Pair<Integer, Integer>> leftCorners, List<Pair<Integer, Integer>> rightCorners) {
     int height = slice2D.length;
     int width = slice2D[0].length;
-    
+
     for (int i = 0; i < height; i++) {
       for (int j = 0; j < width; j++) {
         char square = slice2D[i][j];
-        
-        if (square == '#' && i - 1 >= 0 && j + 1 < width && slice2D[i - 1][j + 1] == '#') {
-          leftCorners.add(new Pair<>(i - 1, j + 1));
+        if (square == '#'
+            && i - 1 >= 0
+            && j + 1 < width
+            && slice2D[i - 1][j] == '#'
+            && slice2D[i][j + 1] == '#') {
+          leftCorners.add(new Pair<>(i, j));
         }
-        if (square == '#' && i - 1 >= 0 && j - 1 < width && slice2D[i - 1][j - 1] == '#') {
-          rightCorners.add(new Pair<>(i - 1, j - 1));
+        if (square == '#'
+            && i - 1 >= 0
+            && j - 1 < width
+            && slice2D[i - 1][j] == '#'
+            && slice2D[i][j - 1] == '#') {
+          rightCorners.add(new Pair<>(i, j));
         }
       }
     }
   }
-  
-  void buildClayList(List<Clay> clays, List<Pair<Integer, Integer>> leftCorners, List<Pair<Integer, Integer>> rightCorners) {
-   for (var leftCorner: leftCorners) {
-     for (var rightCorner: rightCorners) {
-       if (leftCorner.getValue0() == rightCorner.getValue0()) {
-         
-       }
-     }
-   }
+
+  void buildClayList(
+      List<Clay> clays,
+      List<Pair<Integer, Integer>> leftCorners,
+      List<Pair<Integer, Integer>> rightCorners) {
+    for (var leftCorner : leftCorners) {
+      for (var rightCorner : rightCorners) {
+        int y3 = leftCorner.getValue0();
+        int x3 = leftCorner.getValue1();
+        int y4 = rightCorner.getValue0();
+        int x4 = rightCorner.getValue1();
+        int x1 = x3;
+        int y1 = y3;
+        int x2 = x4;
+        int y2 = y4;
+        // if this is a bottom
+        if (y3 == y4 && IntStream.rangeClosed(x3, x4).allMatch(x -> slice2D[y3][x] == '#')) {
+          for (int i = y3; i >= 0; i--) {
+            if (slice2D[i][x3] != '#') {
+              y1 = i + 1;
+              break;
+            }
+          }
+          for (int i = y4; i >= 0; i--) {
+            if (slice2D[i][x4] != '#') {
+              y2 = i + 1;
+              break;
+            }
+          }
+
+          clays.add(
+              new Clay(
+                  new Pair<>(y1, x1), new Pair<>(y2, x2), new Pair<>(y3, x3), new Pair<>(y4, x4)));
+        }
+      }
+    }
   }
-  
+
+  boolean didWaterReachBottom(Pair<Integer, Integer> waterPosition, List<Clay> clayList) {
+    for (Clay clay : clayList) {
+      int y3 = clay.getDownLeft().getValue0();
+      int x3 = clay.getDownLeft().getValue1();
+      int y4 = clay.getDownRight().getValue0();
+      int x4 = clay.getDownRight().getValue1();
+      int y = waterPosition.getValue0();
+      int x = waterPosition.getValue1();
+      
+      if (y == y3 - 1 && x > x3 && x < x4) {
+        // we have reached bottom of the clay
+        return true;
+      }
+    }
+    return false;
+  }
+
+  int getResult1() {
+    List<Pair<Integer, Integer>> leftCorners = new ArrayList<>();
+    List<Pair<Integer, Integer>> rightCorners = new ArrayList<>();
+    getClayCorners(leftCorners, rightCorners);
+    List<Clay> clayList = new ArrayList<>();
+    buildClayList(clayList, leftCorners, rightCorners);
+    clayList.forEach(System.out::println);
+    List<Pair<Integer, Integer>> waterFlows = new ArrayList<>();
+    waterFlows.add(new Pair<>(0, 500));
+    return -1;
+  }
+
   static class Clay {
+
+    public Clay(
+        Pair<Integer, Integer> upperLeft,
+        Pair<Integer, Integer> upperRight,
+        Pair<Integer, Integer> downLeft,
+        Pair<Integer, Integer> downRight) {
+      this.upperLeft = upperLeft;
+      this.upperRight = upperRight;
+      this.downLeft = downLeft;
+      this.downRight = downRight;
+    }
 
     @Override
     public String toString() {
-      return "Clay{" +
-          "upperLeft=" + upperLeft +
-          ", upperRight=" + upperRight +
-          ", downLeft=" + downLeft +
-          ", downRight=" + downRight +
-          '}';
+      return "Clay{"
+          + "upperLeft="
+          + upperLeft
+          + ", upperRight="
+          + upperRight
+          + ", downLeft="
+          + downLeft
+          + ", downRight="
+          + downRight
+          + '}';
     }
 
     public Pair<Integer, Integer> getUpperLeft() {
@@ -164,14 +243,9 @@ class Day17 {
     private Pair<Integer, Integer> downLeft;
     private Pair<Integer, Integer> downRight;
   }
-  
 
-  int getResult1() {
-    return -1;
-  }
-  
   Square getNextSquareInWaterflow(Square lastSquare) {
-   return lastSquare; 
+    return lastSquare;
   }
 
   int getResult2() {
