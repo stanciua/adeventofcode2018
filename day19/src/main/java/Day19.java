@@ -2,81 +2,36 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 class Day19 {
-  private final List<int[]> beforeRegisters;
-  private final List<int[]> afterRegisters;
-  private final List<Instruction> instructions;
-  private final List<Instruction> part2Instructions;
 
-  private static final Pattern beforePattern =
-      Pattern.compile("Before:\\s\\[(\\d+),\\s(\\d+),\\s(\\d+),\\s(\\d+)]");
+  int ipBoundRegister = 0;
+  List<Instruction> instructions;
+
+  private static final Pattern ipBoundRegisterPattern =
+      Pattern.compile("#ip\\s(\\d)");
   private static final Pattern instructionPattern =
-      Pattern.compile("(\\d+)\\s(\\d+)\\s(\\d+)\\s(\\d+)");
-  private static final Pattern afterPattern =
-      Pattern.compile("After:\\s\\s\\[(\\d+),\\s(\\d+),\\s(\\d+),\\s(\\d+)]");
+      Pattern.compile("(\\w+)\\s(\\d+)\\s(\\d+)\\s(\\d+)");
 
   Day19() throws Exception {
-    beforeRegisters = new ArrayList<>();
-    afterRegisters = new ArrayList<>();
     instructions = new ArrayList<>();
-    part2Instructions = new ArrayList<>();
     String[] lines = Files.lines(Path.of("src/test/java/input.txt")).toArray(String[]::new);
-    boolean isEndOfFirstPart = false;
-    for (int i = 0; i < lines.length; i++) {
-      String line = lines[i];
-
-      if (i < lines.length - 2 && line.isEmpty() && lines[i + 1].isEmpty() && lines[i + 2]
-          .isEmpty()) {
-        isEndOfFirstPart = true;
+    for (String line : lines) {
+      Matcher match = ipBoundRegisterPattern.matcher(line);
+      if (match.matches()) {
+        ipBoundRegister = Integer.valueOf(match.group(1));
+        continue;
       }
-      if (!isEndOfFirstPart) {
-        Matcher match = beforePattern.matcher(line);
-        if (match.matches()) {
-          int[] registers = new int[4];
-          registers[0] = Integer.valueOf(match.group(1));
-          registers[1] = Integer.valueOf(match.group(2));
-          registers[2] = Integer.valueOf(match.group(3));
-          registers[3] = Integer.valueOf(match.group(4));
-          beforeRegisters.add(registers);
-          continue;
-        }
-        match = instructionPattern.matcher(line);
-        if (match.matches()) {
-          Instruction instruction = new Instruction(
-              Opcode.fromOrdinal(Integer.parseInt(match.group(1))),
-              Integer.parseInt(match.group(2)), Integer.parseInt(match.group(3)),
-              Integer.parseInt(match.group(4)));
-          instructions.add(instruction);
-          continue;
-        }
-        match = afterPattern.matcher(line);
-        if (match.matches()) {
-          int[] registers = new int[4];
-          registers[0] = Integer.valueOf(match.group(1));
-          registers[1] = Integer.valueOf(match.group(2));
-          registers[2] = Integer.valueOf(match.group(3));
-          registers[3] = Integer.valueOf(match.group(4));
-          afterRegisters.add(registers);
-        }
-      } else {
-        Matcher match = instructionPattern.matcher(line);
-        if (match.matches()) {
-          Instruction instruction = new Instruction(
-              Opcode.fromOrdinal(Integer.parseInt(match.group(1))),
-              Integer.parseInt(match.group(2)), Integer.parseInt(match.group(3)),
-              Integer.parseInt(match.group(4)));
-          part2Instructions.add(instruction);
-        }
+      match = instructionPattern.matcher(line);
+      if (match.matches()) {
+        Instruction instruction = new Instruction(
+            Opcode.valueOf(match.group(1).toUpperCase()),
+            Integer.parseInt(match.group(2)), Integer.parseInt(match.group(3)),
+            Integer.parseInt(match.group(4)));
+        instructions.add(instruction);
       }
     }
   }
@@ -172,96 +127,51 @@ class Day19 {
     }
   }
 
-  private int getNoOfSamplesData(Map<Opcode, Set<Integer>> opcodeMap) {
-    int[] outputRegisters = new int[4];
-    Opcode[] opcodes = {Opcode.ADDR,
-        Opcode.ADDI,
-        Opcode.MULR,
-        Opcode.MULI,
-        Opcode.BANR,
-        Opcode.BANI,
-        Opcode.BORR,
-        Opcode.BORI,
-        Opcode.SETR,
-        Opcode.SETI,
-        Opcode.GTIR,
-        Opcode.GTRI,
-        Opcode.GTRR,
-        Opcode.EQIR,
-        Opcode.EQRI,
-        Opcode.EQRR};
-    int noOfSamples = 0;
-    for (int i = 0; i < instructions.size(); i++) {
-      int count = 0;
-      for (Opcode opcode : opcodes) {
-        execute(opcode, beforeRegisters.get(i), outputRegisters, instructions.get(i));
-        if (Arrays.equals(outputRegisters, afterRegisters.get(i))) {
-          int value = instructions.get(i).getOpcode().ordinal();
-          Set<Integer> set = opcodeMap.getOrDefault(opcode, new HashSet<>());
-          set.add(value);
-          opcodeMap.put(opcode, set);
-          count++;
-        }
-      }
-      if (count >= 3) {
-        noOfSamples++;
-      }
-    }
-    return noOfSamples;
-  }
-
   int getResult1() {
-    Map<Opcode, Set<Integer>> opcodeMap = new HashMap<>();
-    return getNoOfSamplesData(opcodeMap);
-  }
-
-  private Map<Opcode, Integer> reduceOpcodeToInteger(
-      List<Map.Entry<Opcode, List<Integer>>> list) {
-    Map<Opcode, Integer> output = new HashMap<>();
-    while (output.size() != list.size()) {
-      for (var entry : list) {
-        if (entry.getValue().size() == 1) {
-          var value = entry.getValue().stream().findFirst().get();
-          output.put(entry.getKey(), value);
-          for (var removeEntry : list) {
-            if (removeEntry.getValue().isEmpty()) {
-              continue;
-            }
-            removeEntry.getValue().remove(value);
-          }
-        }
-      }
+    int[] inputRegisters = {0, 0, 0, 0, 0, 0};
+    int[] outputRegisters = {0, 0, 0, 0, 0, 0};
+    int ip = 0;
+    int count = 0;
+    while (ip < instructions.size()) {
+      inputRegisters[ipBoundRegister] = ip;
+      execute(instructions.get(ip).getOpcode(), inputRegisters, outputRegisters,
+          instructions.get(ip));
+      System.arraycopy(outputRegisters, 0, inputRegisters, 0, outputRegisters.length);
+      ip = inputRegisters[ipBoundRegister] + 1;
+      count++;
     }
-
-    return output;
+    return outputRegisters[0];
   }
 
   int getResult2() {
-    Map<Opcode, Set<Integer>> opcodeMap = new HashMap<>();
-    getNoOfSamplesData(opcodeMap);
-
-    Map<Opcode, List<Integer>> entryMap = new HashMap<>();
-    for (var entry : opcodeMap.entrySet()) {
-      entryMap.put(entry.getKey(),
-          entry.getValue().stream().sorted().collect(Collectors.toCollection(ArrayList::new)));
-    }
-    var list = entryMap.entrySet().stream()
-        .sorted(Comparator.comparingInt(e -> e.getValue().size()))
-        .collect(
-            Collectors.toCollection(ArrayList::new));
-
-    var output = reduceOpcodeToInteger(list);
-    var opcodeIntegerMap = output.entrySet().stream()
-        .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
-    int[] inputRegisters = {0, 0, 0, 0};
-    int[] outputRegisters = {0, 0, 0, 0};
-    for (var instruction : part2Instructions) {
-      execute(opcodeIntegerMap.get(instruction.getOpcode().ordinal()), inputRegisters,
-          outputRegisters, instruction);
+    int[] inputRegisters = {1, 0, 0, 0, 0, 0};
+    int[] outputRegisters = {0, 0, 0, 0, 0, 0};
+    int ip = 0;
+    int count = 0;
+    while (ip < instructions.size() ) {
+      if (ip == 16) {
+        System.out.println("boom");
+      Arrays.stream(inputRegisters).forEach(e -> System.out.print(e + " "));
+      System.out.println();
+      System.out.println(instructions.get(ip));
+      Arrays.stream(outputRegisters).forEach(e -> System.out.print(e + " "));
+      System.out.println();
+      }
+//      System.out.println(ip);
+      inputRegisters[ipBoundRegister] = ip;
+//      Arrays.stream(inputRegisters).forEach(e -> System.out.print(e + " "));
+//      System.out.println();
+//      System.out.println(instructions.get(ip));
+      execute(instructions.get(ip).getOpcode(), inputRegisters, outputRegisters,
+          instructions.get(ip));
       System.arraycopy(outputRegisters, 0, inputRegisters, 0, outputRegisters.length);
+//      Arrays.stream(outputRegisters).forEach(e -> System.out.print(e + " "));
+      ip = inputRegisters[ipBoundRegister] + 1;
+//      System.out.println();
+//      System.out.println();
+      count++;
     }
-
-    return inputRegisters[0];
+    return outputRegisters[0];
   }
 
   enum Opcode {
