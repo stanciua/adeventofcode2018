@@ -36,7 +36,7 @@ class Day19 {
     }
   }
 
-  private void execute(Opcode opcode, int[] inputRegisters, int[] outputRegisters,
+  private void execute(Opcode opcode, long[] inputRegisters, long[] outputRegisters,
       Instruction instruction) {
     System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
     switch (opcode) {
@@ -127,9 +127,9 @@ class Day19 {
     }
   }
 
-  int getResult1() {
-    int[] inputRegisters = {0, 0, 0, 0, 0, 0};
-    int[] outputRegisters = {0, 0, 0, 0, 0, 0};
+  long getResult1() {
+    long[] inputRegisters = {0, 0, 0, 0, 0, 0};
+    long[] outputRegisters = {0, 0, 0, 0, 0, 0};
     int ip = 0;
     int count = 0;
     while (ip < instructions.size()) {
@@ -137,42 +137,58 @@ class Day19 {
       execute(instructions.get(ip).getOpcode(), inputRegisters, outputRegisters,
           instructions.get(ip));
       System.arraycopy(outputRegisters, 0, inputRegisters, 0, outputRegisters.length);
-      ip = inputRegisters[ipBoundRegister] + 1;
+      ip = (int) (inputRegisters[ipBoundRegister] + 1);
       count++;
     }
     return outputRegisters[0];
   }
 
-  int getResult2() {
-    int[] inputRegisters = {1, 0, 0, 0, 0, 0};
-    int[] outputRegisters = {0, 0, 0, 0, 0, 0};
+  void fastExecution1(long[] inputRegisters) {
+    inputRegisters[4] = inputRegisters[3];
+    inputRegisters[2] = inputRegisters[3];
+  }
+
+  void fastExecution2(long[] inputRegisters) {
+    inputRegisters[2] = inputRegisters[3];
+  }
+
+  void fastExecution3(int[] inputRegisters) {
+    inputRegisters[1] = inputRegisters[3] + 1;
+  }
+
+  long getResult2() {
+    long[] inputRegisters = {1, 0, 0, 0, 0, 0};
+    long[] outputRegisters = {0, 0, 0, 0, 0, 0};
     int ip = 0;
     int count = 0;
-    while (ip < instructions.size() ) {
-      if (ip == 16) {
-        System.out.println("boom");
+//    while (ip < instructions.size()) {
+    while (ip < instructions.size() && count < 10000) {
+      System.out.println(ip);
+      if (ip == 4) {
+        fastExecution1(inputRegisters);
+      }
+      if (ip == 9) {
+        fastExecution2(inputRegisters);
+      }
+//      if (ip == 13) {
+//        fastExecution3(inputRegisters);
+//      }
+      inputRegisters[ipBoundRegister] = ip;
       Arrays.stream(inputRegisters).forEach(e -> System.out.print(e + " "));
       System.out.println();
       System.out.println(instructions.get(ip));
-      Arrays.stream(outputRegisters).forEach(e -> System.out.print(e + " "));
-      System.out.println();
-      }
-//      System.out.println(ip);
-      inputRegisters[ipBoundRegister] = ip;
-//      Arrays.stream(inputRegisters).forEach(e -> System.out.print(e + " "));
-//      System.out.println();
-//      System.out.println(instructions.get(ip));
       execute(instructions.get(ip).getOpcode(), inputRegisters, outputRegisters,
           instructions.get(ip));
       System.arraycopy(outputRegisters, 0, inputRegisters, 0, outputRegisters.length);
-//      Arrays.stream(outputRegisters).forEach(e -> System.out.print(e + " "));
-      ip = inputRegisters[ipBoundRegister] + 1;
-//      System.out.println();
-//      System.out.println();
+      Arrays.stream(outputRegisters).forEach(e -> System.out.print(e + " "));
+      ip = (int) (inputRegisters[ipBoundRegister] + 1);
+      System.out.println();
+      System.out.println();
       count++;
     }
     return outputRegisters[0];
   }
+
 
   enum Opcode {
     ADDR,
