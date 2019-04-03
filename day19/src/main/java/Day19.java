@@ -164,12 +164,12 @@ class Day19 {
 //    while (ip < instructions.size()) {
     while (ip < instructions.size() && count < 10000) {
       System.out.println(ip);
-      if (ip == 4) {
-        fastExecution1(inputRegisters);
-      }
-      if (ip == 9) {
-        fastExecution2(inputRegisters);
-      }
+//      if (ip == 4) {
+//        fastExecution1(inputRegisters);
+//      }
+//      if (ip == 9) {
+//        fastExecution2(inputRegisters);
+//      }
 //      if (ip == 13) {
 //        fastExecution3(inputRegisters);
 //      }
@@ -189,6 +189,44 @@ class Day19 {
     return outputRegisters[0];
   }
 
+  void dissasembly() {
+    // 3, 4, 5, 6, 8, 9, 10, 11
+    int r0 = 1;
+    int r1 = 0;
+    int r2 = 0;
+    int r3 = 0;
+    int r4 = 0;
+    int r5 = 0;
+    int ip = 0;
+    done:
+    while (true) {
+      // IP: 2	
+      loop1:
+      while (true) {
+        r2 = 1;
+        // IP: 3
+        loop2:
+        while (true) {
+          r4 = r1 * r2;
+          if (r4 == r3) {
+            r0 += r1;
+          }
+          r2 += 1;
+          if (r2 > r3) {
+            r1 += 1;
+            if (r1 > r3) {
+              break done;
+            } else {
+              continue loop1;
+            }
+
+          } else {
+            continue loop2;
+          }
+        }
+      }
+    }
+  }
 
   enum Opcode {
     ADDR,
