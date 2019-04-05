@@ -1,15 +1,14 @@
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 class Day19 {
 
-  int ipBoundRegister = 0;
-  List<Instruction> instructions;
+  private int ipBoundRegister = 0;
+  private final List<Instruction> instructions;
 
   private static final Pattern ipBoundRegisterPattern =
       Pattern.compile("#ip\\s(\\d)");
@@ -36,7 +35,7 @@ class Day19 {
     }
   }
 
-  private void execute(Opcode opcode, long[] inputRegisters, long[] outputRegisters,
+  private void execute(Opcode opcode, int[] inputRegisters, int[] outputRegisters,
       Instruction instruction) {
     System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
     switch (opcode) {
@@ -127,105 +126,50 @@ class Day19 {
     }
   }
 
-  long getResult1() {
-    long[] inputRegisters = {0, 0, 0, 0, 0, 0};
-    long[] outputRegisters = {0, 0, 0, 0, 0, 0};
+  int getResult1() {
+    int[] inputRegisters = {0, 0, 0, 0, 0, 0};
+    int[] outputRegisters = {0, 0, 0, 0, 0, 0};
     int ip = 0;
-    int count = 0;
     while (ip < instructions.size()) {
       inputRegisters[ipBoundRegister] = ip;
       execute(instructions.get(ip).getOpcode(), inputRegisters, outputRegisters,
           instructions.get(ip));
       System.arraycopy(outputRegisters, 0, inputRegisters, 0, outputRegisters.length);
-      ip = (int) (inputRegisters[ipBoundRegister] + 1);
-      count++;
+      ip = inputRegisters[ipBoundRegister] + 1;
     }
     return outputRegisters[0];
   }
 
-  void fastExecution1(long[] inputRegisters) {
-    inputRegisters[4] = inputRegisters[3];
-    inputRegisters[2] = inputRegisters[3];
+  private void fastExecution(int[] inputRegisters, int[] outputRegisters) {
+    System.arraycopy(inputRegisters, 0, outputRegisters, 0, inputRegisters.length);
+    outputRegisters[2] = inputRegisters[3];
+    long result = inputRegisters[3] % inputRegisters[1];
+    if (result == 0) {
+      outputRegisters[4] = 1;
+    } else {
+      outputRegisters[4] = 0;
+    }
   }
 
-  void fastExecution2(long[] inputRegisters) {
-    inputRegisters[2] = inputRegisters[3];
-  }
-
-  void fastExecution3(int[] inputRegisters) {
-    inputRegisters[1] = inputRegisters[3] + 1;
-  }
-
-  long getResult2() {
-    long[] inputRegisters = {1, 0, 0, 0, 0, 0};
-    long[] outputRegisters = {0, 0, 0, 0, 0, 0};
+  int getResult2() {
+    int[] inputRegisters = {1, 0, 0, 0, 0, 0};
+    int[] outputRegisters = {0, 0, 0, 0, 0, 0};
     int ip = 0;
-    int count = 0;
-//    while (ip < instructions.size()) {
-    while (ip < instructions.size() && count < 10000) {
-      System.out.println(ip);
-//      if (ip == 4) {
-//        fastExecution1(inputRegisters);
-//      }
-//      if (ip == 9) {
-//        fastExecution2(inputRegisters);
-//      }
-//      if (ip == 13) {
-//        fastExecution3(inputRegisters);
-//      }
+    int numInstructions = instructions.size();
+    while (ip < numInstructions) {
       inputRegisters[ipBoundRegister] = ip;
-      Arrays.stream(inputRegisters).forEach(e -> System.out.print(e + " "));
-      System.out.println();
-      System.out.println(instructions.get(ip));
-      execute(instructions.get(ip).getOpcode(), inputRegisters, outputRegisters,
-          instructions.get(ip));
+      if (ip == 4) {
+        // if r3 % r1 == 0 -> r0 += r1;
+        // r0 will contain the sum of all divisors of r3
+        fastExecution(inputRegisters, outputRegisters);
+      } else {
+        execute(instructions.get(ip).getOpcode(), inputRegisters, outputRegisters,
+            instructions.get(ip));
+      }
       System.arraycopy(outputRegisters, 0, inputRegisters, 0, outputRegisters.length);
-      Arrays.stream(outputRegisters).forEach(e -> System.out.print(e + " "));
-      ip = (int) (inputRegisters[ipBoundRegister] + 1);
-      System.out.println();
-      System.out.println();
-      count++;
+      ip = inputRegisters[ipBoundRegister] + 1;
     }
     return outputRegisters[0];
-  }
-
-  void dissasembly() {
-    // 3, 4, 5, 6, 8, 9, 10, 11
-    int r0 = 1;
-    int r1 = 0;
-    int r2 = 0;
-    int r3 = 0;
-    int r4 = 0;
-    int r5 = 0;
-    int ip = 0;
-    done:
-    while (true) {
-      // IP: 2	
-      loop1:
-      while (true) {
-        r2 = 1;
-        // IP: 3
-        loop2:
-        while (true) {
-          r4 = r1 * r2;
-          if (r4 == r3) {
-            r0 += r1;
-          }
-          r2 += 1;
-          if (r2 > r3) {
-            r1 += 1;
-            if (r1 > r3) {
-              break done;
-            } else {
-              continue loop1;
-            }
-
-          } else {
-            continue loop2;
-          }
-        }
-      }
-    }
   }
 
   enum Opcode {
@@ -244,12 +188,7 @@ class Day19 {
     GTRR,
     EQIR,
     EQRI,
-    EQRR;
-    private static final Opcode[] allVAlues = values();
-
-    static Opcode fromOrdinal(int n) {
-      return allVAlues[n];
-    }
+    EQRR
   }
 
   static class Instruction {

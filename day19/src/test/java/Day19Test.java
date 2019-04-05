@@ -18,7 +18,7 @@ public class Day19Test {
   public void testDay6Result2() {
     try {
       Day19 day19 = new Day19();
-      assertEquals(594, day19.getResult2());
+      assertEquals(13083798, day19.getResult2());
     } catch (Exception e) {
       assert (false);
     }
