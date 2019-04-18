@@ -1,59 +1,63 @@
+import org.javatuples.Pair;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Stack;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 class Day20 {
   Day20() throws Exception {
     String input = Files.readString(Path.of("src/test/java/input.txt"));
-    System.out.println(reduceInput(input));
+    System.out.println(getPaths(input));
   }
 
-  String reduceForm(String inputForm) {
-    int openParenPos = inputForm.indexOf('(');
-    int closeParenPos = inputForm.indexOf(')');
-    String firstToken = inputForm.substring(0, openParenPos);
-    List<String> tokens =
-        Arrays.stream(inputForm.substring(openParenPos + 1, closeParenPos).split("\\|"))
-            .collect(Collectors.toCollection(ArrayList::new));
-    // check for the empty option case
-    if (inputForm.charAt(closeParenPos - 1) == '|') {
-      tokens.add(new String()); 
-    }
-    return tokens.stream().map(t -> firstToken + t).collect(Collectors.joining("|"));
-  }
-
-  String reduceInput(String input) {
-    // ^ENWWW(NEEE|SSE(EE|N))$
-    // Here's an idea:
-    //   - go to the most inner term of form: SSE(EE|N)
-    //   - then reduce it to SSEEE | SSEN
-    //   - repeat the process until we have a large string that separates each path with | as:
-    //       ^ENWWWNEEE|ENWWWSSEEE|ENWWWSSEN$
-    StringBuilder output = new StringBuilder(input);
-    int lastIndexOpenParen = output.lastIndexOf("(");
-    while (lastIndexOpenParen != -1) {
-      int lastIndexCloseParen = output.indexOf(")", lastIndexOpenParen);
-      int startPos = getFirstTokenPosBeforeOpenParen(output, lastIndexOpenParen - 1);
-      String reducedForm = reduceForm(output.substring(startPos, lastIndexCloseParen + 1));
-      output.replace(startPos, lastIndexCloseParen + 1, reducedForm);
-      lastIndexOpenParen = output.lastIndexOf("(");
-    }
-    return output.toString();
-  }
-
-  int getFirstTokenPosBeforeOpenParen(StringBuilder input, int firstPosition) {
-    while (firstPosition >= 0) {
-      char c = input.charAt(firstPosition);
-      if (c != 'N' && c != 'S' && c != 'E' && c != 'W') {
+  Pair<Integer, Integer> getNextPosition(Pair<Integer, Integer> currentPosition, char direction) {
+    Pair<Integer, Integer> nextPosition;
+    int x = currentPosition.getValue0();
+    int y = currentPosition.getValue1();
+    switch (direction) {
+      case 'E':
+        nextPosition = new Pair<>(x, y + 1);
         break;
-      }
-      firstPosition--;
+      case 'W':
+        nextPosition = new Pair<>(x, y - 1);
+        break;
+      case 'N':
+        nextPosition = new Pair<>(x - 1, y);
+        break;
+      case 'S':
+        nextPosition = new Pair<>(x + 1, y);
+        break;
+      default:
+        throw new IllegalArgumentException("Invalid coordinate received");
     }
-    return firstPosition + 1;
+
+    return nextPosition;
+  }
+
+  List<Pair<Integer, Integer>> getPaths(String input) {
+    Stack<Pair<Integer, Integer>> stack = new Stack<>();
+    List<Pair<Integer, Integer>> map = new ArrayList<>();
+    Pair<Integer, Integer> currentPosition = new Pair<>(0, 0);
+    Pair<Integer, Integer> nextPosition;
+    for (char c : input.toCharArray()) {
+      if (c == 'E' || c == 'W' || c == 'N' || c == 'S') {
+        nextPosition = getNextPosition(currentPosition, c);
+        map.add(nextPosition);
+        currentPosition = nextPosition;
+      } else if (c == '(') {
+        stack.push(map.get(map.size() - 1));
+      } else if (c == '|') {
+        currentPosition = stack.peek();
+      } else if (c == ')') {
+        currentPosition = stack.pop();
+      }
+    }
+    return map;
   }
 
   int getResult1() {
