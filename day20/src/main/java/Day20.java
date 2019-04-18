@@ -3,46 +3,84 @@ import org.javatuples.Pair;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Stack;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 class Day20 {
+  char[][] map;
+  int originX;
+  int originY;
   Day20() throws Exception {
     String input = Files.readString(Path.of("src/test/java/input.txt"));
-    System.out.println(getPaths(input));
+    map = new char[10][10];
+    for (int i =0; i < map.length; i++) {
+      for (int j = 0; j <map[0].length; j++) {
+        map[i][j] = '?';
+      }
+    }
+    originX = map.length / 2;
+    originY = map[0].length / 2;
+    map[originX][originY] = 'X';
+    
+    getPaths(input);
+    
+    updateMapWithWalls();
+    displayMap();
   }
-
+  
+  void updateMapWithWalls() {
+    for (int i =0; i < map.length; i++) {
+      for (int j = 0; j <map[0].length; j++) {
+        if (map[i][j] == '?') {
+          map[i][j] = '#';
+        }
+      }
+    }
+  }
   Pair<Integer, Integer> getNextPosition(Pair<Integer, Integer> currentPosition, char direction) {
     Pair<Integer, Integer> nextPosition;
     int x = currentPosition.getValue0();
     int y = currentPosition.getValue1();
     switch (direction) {
       case 'E':
-        nextPosition = new Pair<>(x, y + 1);
+        nextPosition = new Pair<>(x, y + 2);
+        map[x][y+2] = '.';
+        map[x][y+1] = '|';
         break;
       case 'W':
-        nextPosition = new Pair<>(x, y - 1);
+        nextPosition = new Pair<>(x, y - 2);
+        map[x][y-2] = '.';
+        map[x][y-1] = '|';
         break;
       case 'N':
-        nextPosition = new Pair<>(x - 1, y);
+        nextPosition = new Pair<>(x - 2, y);
+        map[x-2][y] = '.';
+        map[x-1][y] = '-';
         break;
       case 'S':
-        nextPosition = new Pair<>(x + 1, y);
+        nextPosition = new Pair<>(x + 2, y);
+        map[x+2][y] = '.';
+        map[x+1][y] = '-';
         break;
       default:
         throw new IllegalArgumentException("Invalid coordinate received");
     }
-
     return nextPosition;
   }
-
+  
+  void displayMap() {
+    for (int i =0; i < map.length; i++) {
+      for (int j = 0; j <map[0].length; j++) {
+        System.out.print(map[i][j]);
+      }
+      System.out.println();
+    }
+  }
+  
   List<Pair<Integer, Integer>> getPaths(String input) {
     Stack<Pair<Integer, Integer>> stack = new Stack<>();
     List<Pair<Integer, Integer>> map = new ArrayList<>();
-    Pair<Integer, Integer> currentPosition = new Pair<>(0, 0);
+    Pair<Integer, Integer> currentPosition = new Pair<>(originX, originY);
     Pair<Integer, Integer> nextPosition;
     for (char c : input.toCharArray()) {
       if (c == 'E' || c == 'W' || c == 'N' || c == 'S') {
