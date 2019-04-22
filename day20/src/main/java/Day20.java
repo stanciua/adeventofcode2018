@@ -1,92 +1,58 @@
-import java.util.HashMap;
-import java.util.Map;
-import org.javatuples.Pair;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
+import org.javatuples.Pair;
 
-public class Day20 {
-  char[][] map;
+class Day20 {
+
+  private char[][] map;
+
   public Day20() throws Exception {
-    String input = Files.readString(Path.of("/Users/stanciua/prog/adeventofcode2018/day20/src/test/java/input.txt"));
-    List<Pair<Integer, Integer>> positionsList = new ArrayList<>();
-    List<Character> directionList = new ArrayList<>();
+    String input = Files.readString(Path.of("src/test/java/input.txt"));
     Map<Pair<Integer, Integer>, Character> roomDoorMap = new HashMap<>();
-    getMapCoordinates(input, roomDoorMap);
+    getRoomsAndDoorsPositions(input, roomDoorMap);
     map = buildMap(roomDoorMap);
-    //    displayMap();
   }
 
-  void findLongestPath(
-      char[][] map, boolean[][] visited, int i, int j, int x, int y, int[] max_dist, int dist) {
-    //    System.out.println("i = " + i + " j = " + j);
+  private void findLongestPath(
+      char[][] map, boolean[][] visited, int i, int j, int x, int y, int[] currentDistance,
+      int dist) {
     if (i == x && j == y) {
-      max_dist[0] = Integer.max(max_dist[0], dist);
+      currentDistance[0] = dist;
       return;
     }
 
     visited[i][j] = true;
 
-    if (isValid(i + 1, j) && isSafe(map, visited, i + 1, j)) {
-      findLongestPath(
-          map,
-          visited,
-          i + 1,
-          j,
-          x,
-          y,
-          max_dist,
-          map[i][j] == '|' || map[i][j] == '-' ? dist + 1 : dist);
+    if (map[i][j] == '|' || map[i][j] == '-') {
+      dist++;
     }
-    if (isValid(i, j + 1) && isSafe(map, visited, i, j + 1)) {
-      findLongestPath(
-          map,
-          visited,
-          i,
-          j + 1,
-          x,
-          y,
-          max_dist,
-          map[i][j] == '|' || map[i][j] == '-' ? dist + 1 : dist);
+    if (canMove(map, visited, i + 1, j)) {
+      findLongestPath(map, visited, i + 1, j, x, y, currentDistance, dist);
     }
-    if (isValid(i - 1, j) && isSafe(map, visited, i - 1, j)) {
-      findLongestPath(
-          map,
-          visited,
-          i - 1,
-          j,
-          x,
-          y,
-          max_dist,
-          map[i][j] == '|' || map[i][j] == '-' ? dist + 1 : dist);
+    if (canMove(map, visited, i, j + 1)) {
+      findLongestPath(map, visited, i, j + 1, x, y, currentDistance, dist);
     }
-    if (isValid(i, j - 1) && isSafe(map, visited, i, j - 1)) {
-      findLongestPath(
-          map,
-          visited,
-          i,
-          j - 1,
-          x,
-          y,
-          max_dist,
-          map[i][j] == '|' || map[i][j] == '-' ? dist + 1 : dist);
+    if (canMove(map, visited, i - 1, j)) {
+      findLongestPath(map, visited, i - 1, j, x, y, currentDistance, dist);
+    }
+    if (canMove(map, visited, i, j - 1)) {
+      findLongestPath(map, visited, i, j - 1, x, y, currentDistance, dist);
     }
 
     visited[i][j] = false;
   }
 
-  boolean isSafe(char[][] map, boolean[][] visited, int x, int y) {
-    return (map[x][y] == '.' || map[x][y] == '|' || map[x][y] == '-') && !visited[x][y];
+  private boolean canMove(char[][] map, boolean[][] visited, int x, int y) {
+    return x < map.length && y < map[0].length && x >= 0 && y >= 0 && (map[x][y] == '.'
+        || map[x][y] == '|' || map[x][y] == '-') && !visited[x][y];
   }
 
-  boolean isValid(int x, int y) {
-    return x < map.length && y < map[0].length && x >= 0 && y >= 0;
-  }
-
-  Pair<Integer, Integer> updateMapAndGetNextPosition(
+  private Pair<Integer, Integer> updateMapAndGetNextPosition(
       Pair<Integer, Integer> currentPosition,
       char direction,
       Map<Pair<Integer, Integer>, Character> map) {
@@ -122,59 +88,48 @@ public class Day20 {
     return nextPosition;
   }
 
-  void displayMap() {
-    for (int i = 0; i < map.length; i++) {
-      for (int j = 0; j < map[0].length; j++) {
-        System.out.print(map[i][j]);
-      }
-      System.out.println();
-    }
-  }
-
-  char[][] buildMap(Map<Pair<Integer, Integer>, Character> map) {
+  private char[][] buildMap(Map<Pair<Integer, Integer>, Character> roomsAndDoorsPositions) {
     // find out the sizes of the grid based on the positions in the map
     int maxX = Integer.MIN_VALUE;
     int maxY = Integer.MIN_VALUE;
-    for (Pair<Integer, Integer> position : map.keySet()) {
+    for (Pair<Integer, Integer> position : roomsAndDoorsPositions.keySet()) {
       maxX = Integer.max(maxX, Math.abs(position.getValue0()));
       maxY = Integer.max(maxY, Math.abs(position.getValue1()));
     }
+    // we size the grid to be the largest X value by largest Y value + 2 to on each coordinate to
+    // take the exterior walls into account
     int xSize = 2 * maxX + 2;
     int ySize = 2 * maxY + 2;
 
-    char[][] grid = new char[xSize][ySize];
+    char[][] map = new char[xSize][ySize];
     // first initialize the grid to be all ?
     for (int i = 0; i < xSize; i++) {
       for (int j = 0; j < ySize; j++) {
-        grid[i][j] = '?';
+        map[i][j] = '?';
       }
     }
     int originX = xSize / 2;
     int originY = ySize / 2;
-    grid[originX][originY] = 'X';
+    map[originX][originY] = 'X';
     // translate every position in the list by originX/originY and plot them in the grid,
     // based on direction we will plot first the door (- or |) and right after the room (.)
-    for (Pair<Integer, Integer> position : map.keySet()) {
+    for (Pair<Integer, Integer> position : roomsAndDoorsPositions.keySet()) {
       int x = position.getValue0();
       int y = position.getValue1();
-      //      System.out.println("x: " + x);
-      //      System.out.println("y: " + y);
-      //      System.out.println("originX: " + originX);
-      //      System.out.println("originY: " + originY);
-      grid[originX + x][originY + y] = map.get(position);
+      map[originX + x][originY + y] = roomsAndDoorsPositions.get(position);
     }
     // after we've done plotting all the positions, change all unknowns (?) with walls (#)
     for (int i = 0; i < xSize; i++) {
       for (int j = 0; j < ySize; j++) {
-        if (grid[i][j] == '?') {
-          grid[i][j] = '#';
+        if (map[i][j] == '?') {
+          map[i][j] = '#';
         }
       }
     }
-    return grid;
+    return map;
   }
 
-  void getMapCoordinates(String input, Map<Pair<Integer, Integer>, Character> map) {
+  private void getRoomsAndDoorsPositions(String input, Map<Pair<Integer, Integer>, Character> map) {
     Stack<Pair<Integer, Integer>> stack = new Stack<>();
     Pair<Integer, Integer> currentPosition = new Pair<>(0, 0);
     for (char c : input.toCharArray()) {
@@ -190,8 +145,7 @@ public class Day20 {
     }
   }
 
-  int getResult1() {
-    // get all the rooms
+  private List<Integer> getListOfDistancesToAllRooms() {
     List<Pair<Integer, Integer>> roomsCoordinates = new ArrayList<>();
     Pair<Integer, Integer> start = new Pair<>(0, 0);
     for (int i = 0; i < map.length; i++) {
@@ -205,26 +159,25 @@ public class Day20 {
       }
     }
     boolean[][] visited = new boolean[map.length][map[0].length];
-    int[] max_dist = {0};
-    int max_max_dist = 0;
+    int[] currentDistance = {0};
+    int startX = start.getValue0();
+    int startY = start.getValue1();
+    List<Integer> distances = new ArrayList<>();
     for (Pair<Integer, Integer> end : roomsCoordinates) {
       resetVisitedArray(visited);
-      findLongestPath(
-          map,
-          visited,
-          start.getValue0(),
-          start.getValue1(),
-          end.getValue0(),
-          end.getValue1(),
-          max_dist,
-          0);
-      max_max_dist = Integer.max(max_max_dist, max_dist[0]);
+      findLongestPath(map, visited, startX, startY, end.getValue0(), end.getValue1(),
+          currentDistance, 0);
+      distances.add(currentDistance[0]);
     }
 
-    return max_max_dist;
+    return distances;
   }
 
-  void resetVisitedArray(boolean[][] visited) {
+  int getResult1() {
+    return getListOfDistancesToAllRooms().stream().max(Integer::compareTo).orElseThrow();
+  }
+
+  private void resetVisitedArray(boolean[][] visited) {
     for (int i = 0; i < visited.length; i++) {
       for (int j = 0; j < visited[0].length; j++) {
         visited[i][j] = false;
@@ -233,15 +186,6 @@ public class Day20 {
   }
 
   int getResult2() {
-    return -1;
-  }
-
-  public static void main(String[] args) {
-    try {
-      Day20 day20 = new Day20();
-      System.out.println(day20.getResult1());
-    } catch (Exception e) {
-        e.printStackTrace();
-    }
+    return (int) getListOfDistancesToAllRooms().stream().filter(d -> d >= 1000).count();
   }
 }
