@@ -1,10 +1,12 @@
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
+import java.util.stream.IntStream;
 import org.javatuples.Pair;
 
 class Day20 {
@@ -164,7 +166,8 @@ class Day20 {
     int startY = start.getValue1();
     List<Integer> distances = new ArrayList<>();
     for (Pair<Integer, Integer> end : roomsCoordinates) {
-      resetVisitedArray(visited);
+      IntStream.range(0, visited.length)
+          .forEach(i -> IntStream.range(0, visited[0].length).forEach(j -> visited[i][j] = false));
       findLongestPath(map, visited, startX, startY, end.getValue0(), end.getValue1(),
           currentDistance, 0);
       distances.add(currentDistance[0]);
@@ -175,14 +178,6 @@ class Day20 {
 
   int getResult1() {
     return getListOfDistancesToAllRooms().stream().max(Integer::compareTo).orElseThrow();
-  }
-
-  private void resetVisitedArray(boolean[][] visited) {
-    for (int i = 0; i < visited.length; i++) {
-      for (int j = 0; j < visited[0].length; j++) {
-        visited[i][j] = false;
-      }
-    }
   }
 
   int getResult2() {
