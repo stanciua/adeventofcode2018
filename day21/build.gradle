@@ -1,0 +1,25 @@
+apply plugin: "java"
+apply plugin: "eclipse"
+apply plugin: "idea"
+
+repositories {
+    mavenCentral()
+}
+
+tasks.withType(JavaExec) {
+    jvmArgs = ['-Xms512m', '-Xmx4096m']
+}
+
+dependencies {
+    testImplementation  "junit:junit:4.12"
+    testImplementation  "org.javatuples:javatuples:1.2"
+    implementation  "junit:junit:4.12"
+    implementation  "org.javatuples:javatuples:1.2"
+}
+
+test {
+    testLogging {
+        exceptionFormat = 'full'
+        events = ["passed", "failed", "skipped"]
+    }
+}
