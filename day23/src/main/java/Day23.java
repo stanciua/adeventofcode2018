@@ -55,6 +55,16 @@ class Day23 {
   }
 
   int getResult2() {
+    long minX = Long.MAX_VALUE;
+    long minY = Long.MAX_VALUE;
+    long minZ = Long.MAX_VALUE;
+    for (Nanobot nanobot: nanobots) {
+      minX = Long.min(minX, nanobot.getPosition().getValue0());
+      minY = Long.min(minY, nanobot.getPosition().getValue1());
+      minZ = Long.min(minZ, nanobot.getPosition().getValue2());
+    }
+
+    System.out.println(minX + ", " + minY + ", " + minZ);
     return -1;
   }
 
