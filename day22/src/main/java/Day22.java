@@ -1,7 +1,5 @@
 import java.security.InvalidParameterException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 class Day22 {
@@ -68,7 +66,7 @@ class Day22 {
     regions.sort(Comparator.comparing(Region::getY).thenComparing(Region::getX));
   }
 
-  char[][] buildMap() {
+  void displayMap() {
     char[][] map = new char[SIZEY][SIZEX];
     for (Region region : regions) {
       if (region.y == MOUTHY && region.x == MOUTHX) {
@@ -83,7 +81,48 @@ class Day22 {
         map[region.y][region.x] = '|';
       }
     }
-    return map;
+
+    for (int i = 0; i < SIZEY; i++) {
+      for (int j = 0; j < SIZEX; j++) {
+        System.out.print(map[i][j]);
+      }
+      System.out.println();
+    }
+  }
+
+  private List<Region> getAdjacentSquares(Region currentRegion, List<Region> map, List<Region> queue) {
+    List<Region> adjacentRegions = new ArrayList<>();
+    int i = currentRegion.getY();
+    int j = currentRegion.getX();
+    // up
+    if (i - 1 >= 0) {
+      Region region = map.get((i - 1) * SIZEX + j);
+      if (queue.contains(region)) {
+        adjacentRegions.add(region);
+      }
+    }
+    // left
+    if (j - 1 >= 0) {
+      Region region = map.get(i * SIZEX + (j - 1));
+      if (queue.contains(region)) {
+        adjacentRegions.add(region);
+      }
+    }
+    // right
+    if (j + 1 < SIZEX) {
+      Region region = map.get(i * SIZEX + (j + 1));
+      if (queue.contains(region)) {
+        adjacentRegions.add(region);
+      }
+    }
+    // down
+    if (i + 1 < SIZEY) {
+      Region region = map.get((i + 1) * SIZEX + j);
+      if (queue.contains(region)) {
+        adjacentRegions.add(region);
+      }
+    }
+    return adjacentRegions;
   }
 
   int getResult1() {
@@ -92,8 +131,8 @@ class Day22 {
         this.regions.stream()
             .filter(r -> r.y >= MOUTHY && r.x >= MOUTHX && r.y <= TARGETY && r.x <= TARGETX)
             .collect(Collectors.toCollection(ArrayList::new));
-    
-    for (Region region: countedRegions) {
+
+    for (Region region : countedRegions) {
       switch (region.regionType) {
         case ROCKY:
           sum += 0;
@@ -110,6 +149,77 @@ class Day22 {
   }
 
   int getResult2() {
+    Region source = regions.get(0);
+    Region destination =
+        regions.stream()
+            .filter(r -> r.getY() == TARGETY && r.getX() == TARGETX)
+            .findAny()
+            .orElseThrow();
+    return getLowestTimePath(regions, source, destination);
+  }
+
+  int timeToNextRegion(Region currentRegion, Region nextRegion) {
+    // .   = rocky    - climbing gear / torch
+    // `=` = wet      - climbing gear / neither
+    // |   = narrow   - torch / neither
+    if (nextRegion.regionType == RegionType.ROCKY) {
+      if (currentRegion.tool == Tool.CLIMBING_GEAR || currentRegion.tool == Tool.TORCH) {
+        nextRegion.tool = currentRegion.tool;
+        return 1;
+      } else {
+        nextRegion.tool = Tool.CLIMBING_GEAR;
+        return 7;
+      }
+    } else if (nextRegion.regionType == RegionType.WET) {
+      if (currentRegion.tool == Tool.CLIMBING_GEAR || currentRegion.tool == Tool.NEITHER) {
+        nextRegion.tool = currentRegion.tool;
+        return 1;
+      } else {
+        nextRegion.tool = Tool.NEITHER;
+        return 7;
+      }
+    } else if (nextRegion.regionType == RegionType.NARROW) {
+      if (currentRegion.tool == Tool.TORCH || currentRegion.tool == Tool.NEITHER) {
+        nextRegion.tool = currentRegion.tool;
+        return 1;
+      } else {
+        nextRegion.tool = Tool.NEITHER;
+        return 7;
+      }
+    }
+
+    throw new IllegalArgumentException("Invalid Region Type -> Tool combination");
+  }
+
+  int getLowestTimePath(List<Region> regions, Region source, Region destination) {
+    Map<Region, Integer> dist = new HashMap<>();
+    List<Region> queue = new ArrayList<>();
+    dist.put(source, 0);
+    source.tool = Tool.TORCH;
+    for (Region region : regions) {
+      if (region.getY() != source.getY() || region.getX() != source.getX()) {
+        dist.put(region, Integer.MAX_VALUE);
+      }
+      queue.add(region);
+    }
+
+    while (!queue.isEmpty()) {
+      Region minTimeRegion =
+              queue.stream().min((r1, r2) -> dist.get(r1).compareTo(dist.get(r2))).orElseThrow();
+      queue.remove(minTimeRegion);
+
+      System.out.println(minTimeRegion.getY() + ", " + minTimeRegion.getX());
+      for (Region region : getAdjacentSquares(minTimeRegion, regions, queue)) {
+        int time = dist.get(minTimeRegion) + timeToNextRegion(minTimeRegion, region);
+        if (time < dist.get(region)) {
+          dist.put(region, time);
+        }
+        // if we reach the destination region we return the time to get here
+        if (destination == region) {
+          return dist.get(region);
+        }
+      }
+    }
     return -1;
   }
 
@@ -129,21 +239,11 @@ class Day22 {
       this.x = x;
     }
 
-    @Override
-    public String toString() {
-      return "Region{" +
-              "y=" + y +
-              ", x=" + x +
-              ", erosionLevel=" + erosionLevel +
-              ", geologicIndex=" + geologicIndex +
-              ", regionType=" + regionType +
-              '}';
-    }
-
     int x;
     int erosionLevel;
     long geologicIndex;
     RegionType regionType;
+    Tool tool;
 
     void calculateGeologicIndex(List<Region> regions) {
       if (this.y == 0 && this.x == 0) {
@@ -168,6 +268,18 @@ class Day22 {
       return this.erosionLevel;
     }
 
+    @Override
+    public String toString() {
+      return "Region{" +
+              "y=" + y +
+              ", x=" + x +
+              ", erosionLevel=" + erosionLevel +
+              ", geologicIndex=" + geologicIndex +
+              ", regionType=" + regionType +
+              ", tool=" + tool +
+              '}';
+    }
+
     void setRegionType() {
       switch (this.erosionLevel % 3) {
         case 0:
@@ -189,5 +301,11 @@ class Day22 {
     ROCKY,
     WET,
     NARROW
+  }
+
+  enum Tool {
+    CLIMBING_GEAR,
+    TORCH,
+    NEITHER
   }
 }
