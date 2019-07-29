@@ -3,13 +3,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 class Day22 {
-  static final int DEPTH = 510;
-  static final int TARGETY = 10;
-  static final int TARGETX = 10;
+  static final int DEPTH = 11541;
+  static final int TARGETY = 778;
+  static final int TARGETX = 14;
   static final int MOUTHY = 0;
   static final int MOUTHX = 0;
-  static final int SIZEY = 16;
-  static final int SIZEX = 16;
+  static final int SIZEY = 900;
+  static final int SIZEX = 30;
 
   List<Region> regions;
   char[][] map;
@@ -90,7 +90,8 @@ class Day22 {
     }
   }
 
-  private List<Region> getAdjacentSquares(Region currentRegion, List<Region> map, List<Region> queue) {
+  private List<Region> getAdjacentSquares(
+      Region currentRegion, List<Region> map, List<Region> queue) {
     List<Region> adjacentRegions = new ArrayList<>();
     int i = currentRegion.getY();
     int j = currentRegion.getX();
@@ -162,30 +163,63 @@ class Day22 {
     // .   = rocky    - climbing gear / torch
     // `=` = wet      - climbing gear / neither
     // |   = narrow   - torch / neither
-    if (nextRegion.regionType == RegionType.ROCKY) {
-      if (currentRegion.tool == Tool.CLIMBING_GEAR || currentRegion.tool == Tool.TORCH) {
-        nextRegion.tool = currentRegion.tool;
-        return 1;
-      } else {
+    if (currentRegion.regionType == nextRegion.regionType) {
+      nextRegion.tool = currentRegion.tool;
+      return 1;
+    }
+
+    if (currentRegion.regionType == RegionType.ROCKY && nextRegion.regionType == RegionType.WET) {
+      if (currentRegion.tool == Tool.TORCH) {
         nextRegion.tool = Tool.CLIMBING_GEAR;
         return 7;
       }
-    } else if (nextRegion.regionType == RegionType.WET) {
-      if (currentRegion.tool == Tool.CLIMBING_GEAR || currentRegion.tool == Tool.NEITHER) {
-        nextRegion.tool = currentRegion.tool;
-        return 1;
-      } else {
+      nextRegion.tool = currentRegion.tool;
+      return 1;
+    }
+
+    if (currentRegion.regionType == RegionType.WET && nextRegion.regionType == RegionType.ROCKY) {
+      if (currentRegion.tool == Tool.NEITHER) {
+        nextRegion.tool = Tool.CLIMBING_GEAR;
+        return 7;
+      }
+      nextRegion.tool = currentRegion.tool;
+      return 1;
+    }
+
+    if (currentRegion.regionType == RegionType.ROCKY && nextRegion.regionType == RegionType.NARROW) {
+      if (currentRegion.tool == Tool.CLIMBING_GEAR) {
+        nextRegion.tool = Tool.TORCH;
+        return 7;
+      }
+      nextRegion.tool = currentRegion.tool;
+      return 1;
+    }
+
+    if (currentRegion.regionType == RegionType.NARROW && nextRegion.regionType == RegionType.ROCKY) {
+      if (currentRegion.tool == Tool.NEITHER) {
+        nextRegion.tool = Tool.TORCH;
+        return 7;
+      }
+      nextRegion.tool = currentRegion.tool;
+      return 1;
+    }
+
+    if (currentRegion.regionType == RegionType.WET && nextRegion.regionType == RegionType.NARROW) {
+      if (currentRegion.tool == Tool.CLIMBING_GEAR) {
         nextRegion.tool = Tool.NEITHER;
         return 7;
       }
-    } else if (nextRegion.regionType == RegionType.NARROW) {
-      if (currentRegion.tool == Tool.TORCH || currentRegion.tool == Tool.NEITHER) {
-        nextRegion.tool = currentRegion.tool;
-        return 1;
-      } else {
+      nextRegion.tool = currentRegion.tool;
+      return 1;
+    }
+
+    if (currentRegion.regionType == RegionType.NARROW && nextRegion.regionType == RegionType.WET) {
+      if (currentRegion.tool == Tool.TORCH) {
         nextRegion.tool = Tool.NEITHER;
         return 7;
       }
+      nextRegion.tool = currentRegion.tool;
+      return 1;
     }
 
     throw new IllegalArgumentException("Invalid Region Type -> Tool combination");
@@ -194,29 +228,31 @@ class Day22 {
   int getLowestTimePath(List<Region> regions, Region source, Region destination) {
     Map<Region, Integer> dist = new HashMap<>();
     List<Region> queue = new ArrayList<>();
-    dist.put(source, 0);
-    source.tool = Tool.TORCH;
     for (Region region : regions) {
-      if (region.getY() != source.getY() || region.getX() != source.getX()) {
-        dist.put(region, Integer.MAX_VALUE);
-      }
+      dist.put(region, Integer.MAX_VALUE);
       queue.add(region);
     }
+    dist.put(source, 0);
+    source.tool = Tool.TORCH;
 
     while (!queue.isEmpty()) {
       Region minTimeRegion =
-              queue.stream().min((r1, r2) -> dist.get(r1).compareTo(dist.get(r2))).orElseThrow();
+          queue.stream().min((r1, r2) -> dist.get(r1).compareTo(dist.get(r2))).orElseThrow();
       queue.remove(minTimeRegion);
 
-      System.out.println(minTimeRegion.getY() + ", " + minTimeRegion.getX());
       for (Region region : getAdjacentSquares(minTimeRegion, regions, queue)) {
         int time = dist.get(minTimeRegion) + timeToNextRegion(minTimeRegion, region);
         if (time < dist.get(region)) {
           dist.put(region, time);
+          System.out.println(region.x + " " + region.y);
         }
         // if we reach the destination region we return the time to get here
-        if (destination == region) {
-          return dist.get(region);
+        if (destination == region && region.tool == Tool.TORCH) {
+          int minutes = dist.get(region);
+          if (region.tool != Tool.TORCH) {
+            minutes += 7;
+          }
+          return minutes;
         }
       }
     }
@@ -270,14 +306,20 @@ class Day22 {
 
     @Override
     public String toString() {
-      return "Region{" +
-              "y=" + y +
-              ", x=" + x +
-              ", erosionLevel=" + erosionLevel +
-              ", geologicIndex=" + geologicIndex +
-              ", regionType=" + regionType +
-              ", tool=" + tool +
-              '}';
+      return "Region{"
+          + "y="
+          + y
+          + ", x="
+          + x
+          + ", erosionLevel="
+          + erosionLevel
+          + ", geologicIndex="
+          + geologicIndex
+          + ", regionType="
+          + regionType
+          + ", tool="
+          + tool
+          + '}';
     }
 
     void setRegionType() {
