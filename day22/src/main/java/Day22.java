@@ -1,35 +1,33 @@
-import java.security.InvalidParameterException;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.javatuples.Pair;
 
 class Day22 {
-  static final int DEPTH = 11541;
-  static final int TARGETY = 778;
-  static final int TARGETX = 14;
-  static final int MOUTHY = 0;
-  static final int MOUTHX = 0;
-  static final int SIZEY = 900;
-  static final int SIZEX = 30;
+  private static final int DEPTH = 11541;
+  private static final int TARGETY = 778;
+  private static final int TARGETX = 14;
+  private static final int MOUTHY = 0;
+  private static final int MOUTHX = 0;
+  private static final int SIZEY = 800;
+  private static final int SIZEX = 30;
+  private final List<Region> regions;
 
-  List<Region> regions;
-  char[][] map;
-
-  Day22() throws Exception {
+  Day22() {
     regions = new ArrayList<>();
     initRegions();
   }
 
-  void initRegions() {
+  private void initRegions() {
     // special cases for MOUTH
     Region mouth = new Region(MOUTHY, MOUTHX);
     mouth.calculateGeologicIndex(regions);
-    mouth.calculateErosionLevel(MOUTHY, MOUTHX);
+    mouth.calculateErosionLevel();
     mouth.setRegionType();
     regions.add(mouth);
     // special cases for TARGET
     Region target = new Region(TARGETY, TARGETX);
     target.calculateGeologicIndex(regions);
-    target.calculateErosionLevel(MOUTHY, MOUTHX);
+    target.calculateErosionLevel();
     target.setRegionType();
     regions.add(target);
     // special case for Y == 0
@@ -37,7 +35,7 @@ class Day22 {
     for (int x = MOUTHX + 1; x < SIZEX; x++) {
       Region region = new Region(y, x);
       region.calculateGeologicIndex(regions);
-      region.calculateErosionLevel(y, x);
+      region.calculateErosionLevel();
       region.setRegionType();
       regions.add(region);
     }
@@ -46,7 +44,7 @@ class Day22 {
     for (y = MOUTHY + 1; y < SIZEY; y++) {
       Region region = new Region(y, x);
       region.calculateGeologicIndex(regions);
-      region.calculateErosionLevel(y, x);
+      region.calculateErosionLevel();
       region.setRegionType();
       regions.add(region);
     }
@@ -58,7 +56,7 @@ class Day22 {
         }
         Region region = new Region(y, x);
         region.calculateGeologicIndex(regions);
-        region.calculateErosionLevel(y, x);
+        region.calculateErosionLevel();
         region.setRegionType();
         regions.add(region);
       }
@@ -66,60 +64,38 @@ class Day22 {
     regions.sort(Comparator.comparing(Region::getY).thenComparing(Region::getX));
   }
 
-  void displayMap() {
-    char[][] map = new char[SIZEY][SIZEX];
-    for (Region region : regions) {
-      if (region.y == MOUTHY && region.x == MOUTHX) {
-        map[region.y][region.x] = 'M';
-      } else if (region.y == TARGETY && region.x == TARGETX) {
-        map[region.y][region.x] = 'T';
-      } else if (region.regionType == RegionType.ROCKY) {
-        map[region.y][region.x] = '.';
-      } else if (region.regionType == RegionType.WET) {
-        map[region.y][region.x] = '=';
-      } else if (region.regionType == RegionType.NARROW) {
-        map[region.y][region.x] = '|';
-      }
-    }
-
-    for (int i = 0; i < SIZEY; i++) {
-      for (int j = 0; j < SIZEX; j++) {
-        System.out.print(map[i][j]);
-      }
-      System.out.println();
-    }
-  }
-
   private List<Region> getAdjacentSquares(
-      Region currentRegion, List<Region> map, List<Region> queue) {
+      Region currentRegion,
+      List<Region> map,
+      Map<Pair<Pair<Integer, Integer>, Tool>, Integer> seenCoordinates) {
     List<Region> adjacentRegions = new ArrayList<>();
     int i = currentRegion.getY();
     int j = currentRegion.getX();
     // up
     if (i - 1 >= 0) {
       Region region = map.get((i - 1) * SIZEX + j);
-      if (queue.contains(region)) {
+      if (!seenCoordinates.containsKey(new Pair<>(new Pair<>(region.y, region.x), region.tool))) {
         adjacentRegions.add(region);
       }
     }
     // left
     if (j - 1 >= 0) {
       Region region = map.get(i * SIZEX + (j - 1));
-      if (queue.contains(region)) {
+      if (!seenCoordinates.containsKey(new Pair<>(new Pair<>(region.y, region.x), region.tool))) {
         adjacentRegions.add(region);
       }
     }
     // right
     if (j + 1 < SIZEX) {
       Region region = map.get(i * SIZEX + (j + 1));
-      if (queue.contains(region)) {
+      if (!seenCoordinates.containsKey(new Pair<>(new Pair<>(region.y, region.x), region.tool))) {
         adjacentRegions.add(region);
       }
     }
     // down
     if (i + 1 < SIZEY) {
       Region region = map.get((i + 1) * SIZEX + j);
-      if (queue.contains(region)) {
+      if (!seenCoordinates.containsKey(new Pair<>(new Pair<>(region.y, region.x), region.tool))) {
         adjacentRegions.add(region);
       }
     }
@@ -158,126 +134,96 @@ class Day22 {
             .orElseThrow();
     return getLowestTimePath(regions, source, destination);
   }
-
-  int timeToNextRegion(Region currentRegion, Region nextRegion) {
-    // .   = rocky    - climbing gear / torch
-    // `=` = wet      - climbing gear / neither
-    // |   = narrow   - torch / neither
-    if (currentRegion.regionType == nextRegion.regionType) {
-      nextRegion.tool = currentRegion.tool;
-      return 1;
-    }
-
-    if (currentRegion.regionType == RegionType.ROCKY && nextRegion.regionType == RegionType.WET) {
-      if (currentRegion.tool == Tool.TORCH) {
-        nextRegion.tool = Tool.CLIMBING_GEAR;
-        return 7;
-      }
-      nextRegion.tool = currentRegion.tool;
-      return 1;
-    }
-
-    if (currentRegion.regionType == RegionType.WET && nextRegion.regionType == RegionType.ROCKY) {
-      if (currentRegion.tool == Tool.NEITHER) {
-        nextRegion.tool = Tool.CLIMBING_GEAR;
-        return 7;
-      }
-      nextRegion.tool = currentRegion.tool;
-      return 1;
-    }
-
-    if (currentRegion.regionType == RegionType.ROCKY && nextRegion.regionType == RegionType.NARROW) {
-      if (currentRegion.tool == Tool.CLIMBING_GEAR) {
-        nextRegion.tool = Tool.TORCH;
-        return 7;
-      }
-      nextRegion.tool = currentRegion.tool;
-      return 1;
-    }
-
-    if (currentRegion.regionType == RegionType.NARROW && nextRegion.regionType == RegionType.ROCKY) {
-      if (currentRegion.tool == Tool.NEITHER) {
-        nextRegion.tool = Tool.TORCH;
-        return 7;
-      }
-      nextRegion.tool = currentRegion.tool;
-      return 1;
-    }
-
-    if (currentRegion.regionType == RegionType.WET && nextRegion.regionType == RegionType.NARROW) {
-      if (currentRegion.tool == Tool.CLIMBING_GEAR) {
-        nextRegion.tool = Tool.NEITHER;
-        return 7;
-      }
-      nextRegion.tool = currentRegion.tool;
-      return 1;
-    }
-
-    if (currentRegion.regionType == RegionType.NARROW && nextRegion.regionType == RegionType.WET) {
-      if (currentRegion.tool == Tool.TORCH) {
-        nextRegion.tool = Tool.NEITHER;
-        return 7;
-      }
-      nextRegion.tool = currentRegion.tool;
-      return 1;
-    }
-
-    throw new IllegalArgumentException("Invalid Region Type -> Tool combination");
-  }
-
-  int getLowestTimePath(List<Region> regions, Region source, Region destination) {
-    Map<Region, Integer> dist = new HashMap<>();
-    List<Region> queue = new ArrayList<>();
-    for (Region region : regions) {
-      dist.put(region, Integer.MAX_VALUE);
-      queue.add(region);
-    }
-    dist.put(source, 0);
+  // Part 2 inspired by https://todd.ginsberg.com/post/advent-of-code/2018/day22/
+  // Previous solution worked for the simple case example but was off to the races for the provided
+  // input
+  private int getLowestTimePath(List<Region> regions, Region source, Region destination) {
+    Pair<Integer, Integer> fromCoordinate = new Pair<>(source.y, source.x);
+    Map<Pair<Pair<Integer, Integer>, Tool>, Integer> seenRegions = new HashMap<>();
+    seenRegions.put(new Pair<>(fromCoordinate, source.tool), 0);
+    PriorityQueue<Region> regionsToEvaluate =
+        new PriorityQueue<>(Comparator.comparing(Region::getCost));
+    regionsToEvaluate.add(source);
     source.tool = Tool.TORCH;
+    while (!regionsToEvaluate.isEmpty()) {
+      var thisPath = regionsToEvaluate.poll();
 
-    while (!queue.isEmpty()) {
-      Region minTimeRegion =
-          queue.stream().min((r1, r2) -> dist.get(r1).compareTo(dist.get(r2))).orElseThrow();
-      queue.remove(minTimeRegion);
+      if (thisPath.x == destination.x
+          && thisPath.y == destination.y
+          && thisPath.tool == Tool.TORCH) {
+        return thisPath.cost;
+      }
 
-      for (Region region : getAdjacentSquares(minTimeRegion, regions, queue)) {
-        int time = dist.get(minTimeRegion) + timeToNextRegion(minTimeRegion, region);
-        if (time < dist.get(region)) {
-          dist.put(region, time);
-          System.out.println(region.x + " " + region.y);
+      var nextSteps = new ArrayList<Region>();
+      for (var neighbor : getAdjacentSquares(thisPath, regions, seenRegions)) {
+        if (neighbor.validTools().contains(thisPath.tool)) {
+          // we can move forward with this tool, cost will be 1
+          var nextStep = new Region(neighbor);
+          nextStep.tool = thisPath.tool;
+          nextStep.cost = thisPath.cost + 1;
+          nextSteps.add(nextStep);
         }
-        // if we reach the destination region we return the time to get here
-        if (destination == region && region.tool == Tool.TORCH) {
-          int minutes = dist.get(region);
-          if (region.tool != Tool.TORCH) {
-            minutes += 7;
-          }
-          return minutes;
+      }
+
+      var remainingTools = new HashSet<>(thisPath.validTools());
+      remainingTools.removeAll(Set.of(thisPath.tool));
+      for (var tool : remainingTools) {
+        // we don't  move in this case, we just switch the tool
+        var nextStep = new Region(thisPath);
+        nextStep.tool = tool;
+        nextStep.cost = thisPath.cost + 7;
+        nextSteps.add(nextStep);
+      }
+
+      for (var step : nextSteps) {
+        var coordinate = new Pair<>(step.y, step.x);
+        // the key here is that we can have the same coordinates but with different tool in the
+        // map
+        var key = new Pair<>(coordinate, step.tool);
+        if (!seenRegions.containsKey(key) || seenRegions.get(key) > step.cost) {
+          regionsToEvaluate.add(step);
+          seenRegions.put(key, step.cost);
         }
       }
     }
+
     return -1;
   }
 
   static class Region {
-    int y;
+    final int y;
 
-    public int getY() {
+    int getY() {
       return y;
     }
 
-    public int getX() {
+    int getX() {
       return x;
     }
 
-    public Region(int y, int x) {
+    int getCost() {
+      return cost;
+    }
+
+    Region(Region other) {
+      this.x = other.x;
+      this.y = other.y;
+      this.erosionLevel = other.erosionLevel;
+      this.geologicIndex = other.geologicIndex;
+      this.cost = other.cost;
+      this.regionType = other.regionType;
+      this.tool = other.tool;
+    }
+
+    Region(int y, int x) {
       this.y = y;
       this.x = x;
     }
 
-    int x;
+    final int x;
     int erosionLevel;
     long geologicIndex;
+    int cost;
     RegionType regionType;
     Tool tool;
 
@@ -299,9 +245,8 @@ class Day22 {
       }
     }
 
-    int calculateErosionLevel(int y, int x) {
+    void calculateErosionLevel() {
       this.erosionLevel = (int) ((this.geologicIndex + DEPTH) % 20183);
-      return this.erosionLevel;
     }
 
     @Override
@@ -315,6 +260,8 @@ class Day22 {
           + erosionLevel
           + ", geologicIndex="
           + geologicIndex
+          + ", cost="
+          + cost
           + ", regionType="
           + regionType
           + ", tool="
@@ -336,6 +283,20 @@ class Day22 {
         default:
           throw new IllegalArgumentException();
       }
+    }
+
+    Set<Tool> validTools() {
+      if ((this.x == MOUTHX && this.y == MOUTHY) || (this.x == TARGETX && this.y == TARGETY)) {
+        return Set.of(Tool.TORCH);
+      } else if (this.regionType == RegionType.ROCKY) {
+        return Set.of(Tool.CLIMBING_GEAR, Tool.TORCH);
+      } else if (this.regionType == RegionType.WET) {
+        return Set.of(Tool.CLIMBING_GEAR, Tool.NEITHER);
+      } else if (this.regionType == RegionType.NARROW) {
+        return Set.of(Tool.TORCH, Tool.NEITHER);
+      }
+
+      return Set.of();
     }
   }
 
