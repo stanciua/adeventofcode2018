@@ -3,6 +3,7 @@ import org.javatuples.Pair;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -78,7 +79,6 @@ class Day17 {
     // initialize the clay cells with '#'
     clayLocations.stream().forEach(c -> slice2D[c.getValue0()][c.getValue1()] = '#');
 
-    displaySlice2D();
   }
 
   void fillWater(char[][] slice2D, int row, int col) {
@@ -86,7 +86,8 @@ class Day17 {
       if (row > maxY) {
         return;
       }
-
+//      displaySlice2D();
+//      System.out.println();
       if (slice2D[row][col] == '#' || slice2D[row][col] == '~') {
         // can it hold water?
         var holdingWater = canHoldWater(slice2D, row, col);
@@ -95,34 +96,90 @@ class Day17 {
           int rightClay = holdingWater.getValue2();
           final int rowFinal = row;
           IntStream.range(leftClay + 1, rightClay).forEach(i -> slice2D[rowFinal - 1][i] = '~');
-          row -= 2;
+          row -= 1;
         } else {
-          // if we cannot hold water we need to see in which direction the water will flow:
-          //  - left = 1
-          //  - right = 2
-          //  - left and right = 3
-          int direction = flowOfWaterDirection(slice2D, row, col);
+          // see if the water can flow left
+          var canFlowLeft = flowOfWaterDirection(slice2D, row - 1, col, Direction.LEFT);
+          var canFlowRight = flowOfWaterDirection(slice2D, row - 1, col, Direction.RIGHT);
+          if (canFlowLeft.getValue0()) {
+            int idx = canFlowLeft.getValue1();
+            final int rowFinal = row - 1;
+            IntStream.range(idx, col).forEach(i -> slice2D[rowFinal][i] = '|');
+            fillWater(slice2D, row, idx);
+          } else {
+            final int rowFinal = row - 1;
+            IntStream.range(canFlowLeft.getValue1() + 1, col).forEach(i -> slice2D[rowFinal][i] = '|');
+          }
+          if (canFlowRight.getValue0()) {
+            int idx = canFlowRight.getValue1();
+            final int rowFinal = row - 1;
+            IntStream.range(col, idx + 1).forEach(i -> slice2D[rowFinal][i] = '|');
+            fillWater(slice2D, row - 1, idx);
+          } else {
+            final int rowFinal = row - 1;
+            IntStream.range(col, canFlowRight.getValue1()).forEach(i -> slice2D[rowFinal][i] = '|');
+          }
+         return; 
         }
+      }else if (slice2D[row][col] == '|') {
+       // water already flows here, we are done
+       return; 
+      } else {
+        // water always flows down
+        slice2D[row][col] = '|';
+        row++;
       }
     }
   }
-  int flowOfWaterDirection(char[][] slice2D, int row, int col) {
-    return -1;
+
+  Pair<Boolean, Integer> flowOfWaterDirection(
+      char[][] slice2D, int row, int col, Direction direction) {
+    if (direction == Direction.LEFT) {
+      for (int i = col - 1; i >= 0; i--) {
+        char firstClayLeft = slice2D[row][i];
+        char firstClayLeftDown = slice2D[row + 1][i];
+        if (firstClayLeft == '.' && firstClayLeftDown == '.') {
+          return new Pair<>(true, i);
+        }
+        if (firstClayLeft == '#') {
+          // we cannot go any further and we should stop
+          return new Pair<>(false, i);
+        }
+      }
+      return new Pair<>(false, -1);
+    } else {
+      for (int i = col + 1; i < maxX; i++) {
+        char firstClayRight = slice2D[row][i];
+        char firstClayRightDown = slice2D[row + 1][i];
+        if (firstClayRight == '.' && firstClayRightDown == '.') {
+          return new Pair<>(true, i);
+        }
+        if (firstClayRight == '#') {
+          // we cannot go any further and we should stop
+          return new Pair<>(false, i);
+        }
+      }
+      return new Pair<>(false, -1);
+    }
   }
-  Triplet<Boolean, Integer, Integer> canHoldWater(char[][] slice2D, int x, int y) {
+
+  Triplet<Boolean, Integer, Integer> canHoldWater(char[][] slice2D, int y, int x) {
     int firstLeftClayPosition = -1;
     int firstRightClayPosition = -1;
 
-    for (int i = x + 1; i <= maxX; i++) {
+    for (int i = x + 1; i < maxX; i++) {
       if (slice2D[y - 1][i] == '#') {
         firstRightClayPosition = i;
         break;
       }
     }
 
-    for (int i = x - 1; i <= 0; i++) {
+    for (int i = x - 1; i >= 0; i--) {
       if (slice2D[y - 1][i] == '#') {
-        firstLeftClayPosition = i; break; } }
+        firstLeftClayPosition = i;
+        break;
+      }
+    }
 
     if (firstLeftClayPosition == -1 || firstRightClayPosition == -1) {
       return new Triplet<>(false, -1, -1);
@@ -137,19 +194,42 @@ class Day17 {
   }
 
   void displaySlice2D() {
-    for (var row : slice2D) {
-      for (var col : row) {
-        System.out.print(col);
+    for(int i = 0; i < slice2D.length; i++) {
+      for (int j = 0; j < slice2D[i].length; j++) {
+        System.out.print(slice2D[i][j]);
       }
       System.out.println();
     }
+//    for(int i = 233; i < 290; i++) {
+//      for (int j = 450; j < 510; j++) {
+//        System.out.print(slice2D[i][j]);
+//      }
+//      System.out.println();
+//    }
   }
 
   int getResult1() {
-    return -1;
+    fillWater(slice2D, 1, 500);
+    displaySlice2D();
+    int count = 0;
+    for (var row : slice2D) {
+      for (var c : row) {
+        if (c == '~' || c == '|') {
+          count++;
+        }
+      }
+    }
+    
+    return count;
   }
 
   int getResult2() {
     return -1;
+  }
+
+  enum Direction {
+    LEFT,
+    RIGHT,
+    DOWN
   }
 }
