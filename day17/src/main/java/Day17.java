@@ -78,7 +78,17 @@ class Day17 {
 
     // initialize the clay cells with '#'
     clayLocations.stream().forEach(c -> slice2D[c.getValue0()][c.getValue1()] = '#');
+  }
 
+  public static String get2DArrayPrint(char[][] matrix) {
+    StringBuilder output = new StringBuilder();
+    for (int i = 0; i < matrix.length; i++) {
+      for (int j = 0; j < matrix[i].length; j++) {
+        output.append(matrix[i][j]);
+      }
+      output.append("\n");
+    }
+    return output.toString();
   }
 
   void fillWater(char[][] slice2D, int row, int col) {
@@ -86,8 +96,6 @@ class Day17 {
       if (row > maxY) {
         return;
       }
-//      displaySlice2D();
-//      System.out.println();
       if (slice2D[row][col] == '#' || slice2D[row][col] == '~') {
         // can it hold water?
         var holdingWater = canHoldWater(slice2D, row, col);
@@ -108,7 +116,8 @@ class Day17 {
             fillWater(slice2D, row, idx);
           } else {
             final int rowFinal = row - 1;
-            IntStream.range(canFlowLeft.getValue1() + 1, col).forEach(i -> slice2D[rowFinal][i] = '|');
+            IntStream.range(canFlowLeft.getValue1() + 1, col)
+                .forEach(i -> slice2D[rowFinal][i] = '|');
           }
           if (canFlowRight.getValue0()) {
             int idx = canFlowRight.getValue1();
@@ -119,11 +128,8 @@ class Day17 {
             final int rowFinal = row - 1;
             IntStream.range(col, canFlowRight.getValue1()).forEach(i -> slice2D[rowFinal][i] = '|');
           }
-         return; 
+          return;
         }
-      }else if (slice2D[row][col] == '|') {
-       // water already flows here, we are done
-       return; 
       } else {
         // water always flows down
         slice2D[row][col] = '|';
@@ -138,12 +144,12 @@ class Day17 {
       for (int i = col - 1; i >= 0; i--) {
         char firstClayLeft = slice2D[row][i];
         char firstClayLeftDown = slice2D[row + 1][i];
-        if (firstClayLeft == '.' && firstClayLeftDown == '.') {
-          return new Pair<>(true, i);
-        }
         if (firstClayLeft == '#') {
           // we cannot go any further and we should stop
           return new Pair<>(false, i);
+        }
+        if (firstClayLeft == '.' && firstClayLeftDown == '.') {
+          return new Pair<>(true, i);
         }
       }
       return new Pair<>(false, -1);
@@ -151,12 +157,12 @@ class Day17 {
       for (int i = col + 1; i < maxX; i++) {
         char firstClayRight = slice2D[row][i];
         char firstClayRightDown = slice2D[row + 1][i];
-        if (firstClayRight == '.' && firstClayRightDown == '.') {
-          return new Pair<>(true, i);
-        }
         if (firstClayRight == '#') {
           // we cannot go any further and we should stop
           return new Pair<>(false, i);
+        }
+        if (firstClayRight == '.' && firstClayRightDown == '.') {
+          return new Pair<>(true, i);
         }
       }
       return new Pair<>(false, -1);
@@ -194,18 +200,18 @@ class Day17 {
   }
 
   void displaySlice2D() {
-    for(int i = 0; i < slice2D.length; i++) {
+    for (int i = 0; i < slice2D.length; i++) {
       for (int j = 0; j < slice2D[i].length; j++) {
         System.out.print(slice2D[i][j]);
       }
       System.out.println();
     }
-//    for(int i = 233; i < 290; i++) {
-//      for (int j = 450; j < 510; j++) {
-//        System.out.print(slice2D[i][j]);
-//      }
-//      System.out.println();
-//    }
+//        for(int i = 233; i < 290; i++) {
+//          for (int j = 450; j < 510; j++) {
+//            System.out.print(slice2D[i][j]);
+//          }
+//          System.out.println();
+//        }
   }
 
   int getResult1() {
@@ -219,7 +225,7 @@ class Day17 {
         }
       }
     }
-    
+
     return count;
   }
 
