@@ -3,7 +3,6 @@ import org.javatuples.Pair;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -14,7 +13,9 @@ import org.javatuples.Triplet;
 class Day17 {
   char[][] slice2D;
   final int maxX;
+  final int minX;
   final int maxY;
+  final int minY;
   private static final Pattern veinsOfClay =
       Pattern.compile("(x|y)=(\\d+),\\s(x|y)=(\\d+)\\.\\.(\\d+)");
 
@@ -60,10 +61,23 @@ class Day17 {
             .map(p -> p.getValue0())
             .max(Comparator.comparing(Integer::intValue))
             .orElseThrow();
+
+    minY =
+        clayLocations.stream()
+            .map(p -> p.getValue0())
+            .min(Comparator.comparing(Integer::intValue))
+            .orElseThrow();
+
     maxX =
         clayLocations.stream()
             .map(p -> p.getValue1())
             .max(Comparator.comparing(Integer::intValue))
+            .orElseThrow();
+
+    minX =
+        clayLocations.stream()
+            .map(p -> p.getValue1())
+            .min(Comparator.comparing(Integer::intValue))
             .orElseThrow();
 
     slice2D = new char[maxY + 1][maxX + 1];
@@ -143,22 +157,35 @@ class Day17 {
     if (direction == Direction.LEFT) {
       for (int i = col - 1; i >= 0; i--) {
         char firstClayLeft = slice2D[row][i];
+        char firstClayLeftLeft = 'x';
+        if (i - 1 >= 0) {
+          firstClayLeftLeft = slice2D[row][i - 1];
+        }
         char firstClayLeftDown = slice2D[row + 1][i];
         if (firstClayLeft == '#') {
           // we cannot go any further and we should stop
           return new Pair<>(false, i);
-        }
-        if (firstClayLeft == '.' && firstClayLeftDown == '.') {
+        } else if ((firstClayLeft == '|' && firstClayLeftDown == '|')
+            || (firstClayLeft == '|' && firstClayLeftLeft == '|')) {
+          return new Pair<>(false, i);
+        } else if (firstClayLeft == '.' && firstClayLeftDown == '.') {
           return new Pair<>(true, i);
         }
       }
       return new Pair<>(false, -1);
     } else {
-      for (int i = col + 1; i < maxX; i++) {
+      for (int i = col + 1; i <= maxX; i++) {
         char firstClayRight = slice2D[row][i];
+        char firstClayRightRight = 'x';
+        if (i + 1 <= maxX) {
+          firstClayRightRight = slice2D[row][i + 1];
+        }
         char firstClayRightDown = slice2D[row + 1][i];
         if (firstClayRight == '#') {
           // we cannot go any further and we should stop
+          return new Pair<>(false, i);
+        } else if ((firstClayRight == '|' && firstClayRightDown == '|')
+            || (firstClayRight == '|' && firstClayRightRight == '|')) {
           return new Pair<>(false, i);
         }
         if (firstClayRight == '.' && firstClayRightDown == '.') {
@@ -173,7 +200,7 @@ class Day17 {
     int firstLeftClayPosition = -1;
     int firstRightClayPosition = -1;
 
-    for (int i = x + 1; i < maxX; i++) {
+    for (int i = x + 1; i <= maxX; i++) {
       if (slice2D[y - 1][i] == '#') {
         firstRightClayPosition = i;
         break;
@@ -201,26 +228,26 @@ class Day17 {
 
   void displaySlice2D() {
     for (int i = 0; i < slice2D.length; i++) {
-      for (int j = 0; j < slice2D[i].length; j++) {
+      for (int j = minX; j < slice2D[i].length; j++) {
         System.out.print(slice2D[i][j]);
       }
       System.out.println();
     }
-//        for(int i = 233; i < 290; i++) {
-//          for (int j = 450; j < 510; j++) {
-//            System.out.print(slice2D[i][j]);
-//          }
-//          System.out.println();
-//        }
+    //        for(int i = 233; i < 290; i++) {
+    //          for (int j = 450; j < 510; j++) {
+    //            System.out.print(slice2D[i][j]);
+    //          }
+    //          System.out.println();
+    //        }
   }
 
   int getResult1() {
     fillWater(slice2D, 1, 500);
-    displaySlice2D();
+//    displaySlice2D();
     int count = 0;
-    for (var row : slice2D) {
-      for (var c : row) {
-        if (c == '~' || c == '|') {
+    for (int i = minY; i <= maxY; i++) {
+      for (int j = 0; j <= maxX; j++) {
+        if (slice2D[i][j] == '~' || slice2D[i][j] == '|') {
           count++;
         }
       }
