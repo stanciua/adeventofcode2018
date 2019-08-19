@@ -16,6 +16,7 @@ class Day17 {
   final int minX;
   final int maxY;
   final int minY;
+  static char malcomx = ' ';
   private static final Pattern veinsOfClay =
       Pattern.compile("(x|y)=(\\d+),\\s(x|y)=(\\d+)\\.\\.(\\d+)");
 
@@ -131,7 +132,10 @@ class Day17 {
           } else {
             final int rowFinal = row - 1;
             IntStream.range(canFlowLeft.getValue1() + 1, col)
-                .forEach(i -> slice2D[rowFinal][i] = '|');
+                .forEach(
+                    i -> {
+                      if (slice2D[rowFinal][i] != '~') slice2D[rowFinal][i] = '|';
+                    });
           }
           if (canFlowRight.getValue0()) {
             int idx = canFlowRight.getValue1();
@@ -140,7 +144,11 @@ class Day17 {
             fillWater(slice2D, row - 1, idx);
           } else {
             final int rowFinal = row - 1;
-            IntStream.range(col, canFlowRight.getValue1()).forEach(i -> slice2D[rowFinal][i] = '|');
+            IntStream.range(col, canFlowRight.getValue1())
+                .forEach(
+                    i -> {
+                      if (slice2D[rowFinal][i] != '~') slice2D[rowFinal][i] = '|';
+                    });
           }
           return;
         }
@@ -228,22 +236,15 @@ class Day17 {
 
   void displaySlice2D() {
     for (int i = 0; i < slice2D.length; i++) {
-      for (int j = minX; j < slice2D[i].length; j++) {
+      for (int j = minX - 1; j < slice2D[i].length; j++) {
         System.out.print(slice2D[i][j]);
       }
       System.out.println();
     }
-    //        for(int i = 233; i < 290; i++) {
-    //          for (int j = 450; j < 510; j++) {
-    //            System.out.print(slice2D[i][j]);
-    //          }
-    //          System.out.println();
-    //        }
   }
 
   int getResult1() {
     fillWater(slice2D, 1, 500);
-//    displaySlice2D();
     int count = 0;
     for (int i = minY; i <= maxY; i++) {
       for (int j = 0; j <= maxX; j++) {
@@ -257,7 +258,16 @@ class Day17 {
   }
 
   int getResult2() {
-    return -1;
+    fillWater(slice2D, 1, 500);
+    int count = 0;
+    for (int i = minY; i <= maxY; i++) {
+      for (int j = 0; j <= maxX; j++) {
+        if (slice2D[i][j] == '~') {
+          count++;
+        }
+      }
+    }
+    return count;
   }
 
   enum Direction {
