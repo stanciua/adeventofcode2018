@@ -126,8 +126,9 @@ class Day17 {
               i -> {
                 if (slice2D[row - 1][i] != '~') slice2D[row - 1][i] = '|';
               });
-      }
+    }
   }
+
   private void waterFlowRight(boolean canFlow, int to, int row, int col) {
     if (canFlow) {
       IntStream.range(col, to + 1).forEach(i -> slice2D[row - 1][i] = '|');
@@ -151,11 +152,10 @@ class Day17 {
           firstClayLeftLeft = slice2D[row][i - 1];
         }
         char firstClayLeftDown = slice2D[row + 1][i];
-        if (firstClayLeft == '#') {
+        if (firstClayLeft == '#'
+            || ((firstClayLeft == '|' && firstClayLeftDown == '|')
+                || (firstClayLeft == '|' && firstClayLeftLeft == '|'))) {
           // we cannot go any further and we should stop
-          return new Pair<>(false, i);
-        } else if ((firstClayLeft == '|' && firstClayLeftDown == '|')
-            || (firstClayLeft == '|' && firstClayLeftLeft == '|')) {
           return new Pair<>(false, i);
         } else if (firstClayLeft == '.' && firstClayLeftDown == '.') {
           return new Pair<>(true, i);
@@ -170,11 +170,10 @@ class Day17 {
           firstClayRightRight = slice2D[row][i + 1];
         }
         char firstClayRightDown = slice2D[row + 1][i];
-        if (firstClayRight == '#') {
+        if (firstClayRight == '#'
+            || ((firstClayRight == '|' && firstClayRightDown == '|')
+                || (firstClayRight == '|' && firstClayRightRight == '|'))) {
           // we cannot go any further and we should stop
-          return new Pair<>(false, i);
-        } else if ((firstClayRight == '|' && firstClayRightDown == '|')
-            || (firstClayRight == '|' && firstClayRightRight == '|')) {
           return new Pair<>(false, i);
         }
         if (firstClayRight == '.' && firstClayRightDown == '.') {
