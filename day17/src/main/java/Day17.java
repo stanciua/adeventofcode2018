@@ -1,3 +1,4 @@
+import java.nio.CharBuffer;
 import org.javatuples.Pair;
 
 import java.nio.file.Files;
@@ -11,19 +12,17 @@ import java.util.stream.IntStream;
 import org.javatuples.Triplet;
 
 class Day17 {
-  char[][] slice2D;
-  final int maxX;
-  final int minX;
-  final int maxY;
-  final int minY;
-  static char malcomx = ' ';
+  private char[][] slice2D;
+  private final int maxX;
+  private final int maxY;
+  private final int minY;
   private static final Pattern veinsOfClay =
-      Pattern.compile("(x|y)=(\\d+),\\s(x|y)=(\\d+)\\.\\.(\\d+)");
+      Pattern.compile("([xy])=(\\d+),\\s([xy])=(\\d+)\\.\\.(\\d+)");
 
   Day17() throws Exception {
-    String[] lines = Files.lines(Path.of("src/test/java/input.txt")).toArray(String[]::new);
     int x = 0;
     int y = 0;
+    String[] lines = Files.lines(Path.of("src/test/java/input.txt")).toArray(String[]::new);
     Pair<Integer, Integer> rangeX = new Pair<>(0, 0);
     Pair<Integer, Integer> rangeY = new Pair<>(0, 0);
     List<Pair<Integer, Integer>> clayLocations = new ArrayList<>();
@@ -45,9 +44,8 @@ class Day17 {
           rangeY = rangeY.setAt0(Integer.parseInt(matcher.group(4)));
           rangeY = rangeY.setAt1(Integer.parseInt(matcher.group(5)));
         }
-
-        final int xFinal = x;
-        final int yFinal = y;
+        int xFinal = x;
+        int yFinal = y;
         if (isXFirst) {
           IntStream.rangeClosed(rangeY.getValue0(), rangeY.getValue1())
               .forEach(yc -> clayLocations.add(new Pair<>(yc, xFinal)));
@@ -59,26 +57,20 @@ class Day17 {
     }
     maxY =
         clayLocations.stream()
-            .map(p -> p.getValue0())
+            .map(Pair::getValue0)
             .max(Comparator.comparing(Integer::intValue))
             .orElseThrow();
 
     minY =
         clayLocations.stream()
-            .map(p -> p.getValue0())
+            .map(Pair::getValue0)
             .min(Comparator.comparing(Integer::intValue))
             .orElseThrow();
 
     maxX =
         clayLocations.stream()
-            .map(p -> p.getValue1())
+            .map(Pair::getValue1)
             .max(Comparator.comparing(Integer::intValue))
-            .orElseThrow();
-
-    minX =
-        clayLocations.stream()
-            .map(p -> p.getValue1())
-            .min(Comparator.comparing(Integer::intValue))
             .orElseThrow();
 
     slice2D = new char[maxY + 1][maxX + 1];
@@ -92,21 +84,10 @@ class Day17 {
     slice2D[0][500] = '+';
 
     // initialize the clay cells with '#'
-    clayLocations.stream().forEach(c -> slice2D[c.getValue0()][c.getValue1()] = '#');
+    clayLocations.forEach(c -> slice2D[c.getValue0()][c.getValue1()] = '#');
   }
 
-  public static String get2DArrayPrint(char[][] matrix) {
-    StringBuilder output = new StringBuilder();
-    for (int i = 0; i < matrix.length; i++) {
-      for (int j = 0; j < matrix[i].length; j++) {
-        output.append(matrix[i][j]);
-      }
-      output.append("\n");
-    }
-    return output.toString();
-  }
-
-  void fillWater(char[][] slice2D, int row, int col) {
+  private void fillWater(char[][] slice2D, int row, int col) {
     while (true) {
       if (row > maxY) {
         return;
@@ -121,35 +102,10 @@ class Day17 {
           IntStream.range(leftClay + 1, rightClay).forEach(i -> slice2D[rowFinal - 1][i] = '~');
           row -= 1;
         } else {
-          // see if the water can flow left
           var canFlowLeft = flowOfWaterDirection(slice2D, row - 1, col, Direction.LEFT);
           var canFlowRight = flowOfWaterDirection(slice2D, row - 1, col, Direction.RIGHT);
-          if (canFlowLeft.getValue0()) {
-            int idx = canFlowLeft.getValue1();
-            final int rowFinal = row - 1;
-            IntStream.range(idx, col).forEach(i -> slice2D[rowFinal][i] = '|');
-            fillWater(slice2D, row, idx);
-          } else {
-            final int rowFinal = row - 1;
-            IntStream.range(canFlowLeft.getValue1() + 1, col)
-                .forEach(
-                    i -> {
-                      if (slice2D[rowFinal][i] != '~') slice2D[rowFinal][i] = '|';
-                    });
-          }
-          if (canFlowRight.getValue0()) {
-            int idx = canFlowRight.getValue1();
-            final int rowFinal = row - 1;
-            IntStream.range(col, idx + 1).forEach(i -> slice2D[rowFinal][i] = '|');
-            fillWater(slice2D, row - 1, idx);
-          } else {
-            final int rowFinal = row - 1;
-            IntStream.range(col, canFlowRight.getValue1())
-                .forEach(
-                    i -> {
-                      if (slice2D[rowFinal][i] != '~') slice2D[rowFinal][i] = '|';
-                    });
-          }
+          waterFlowLeft(canFlowLeft.getValue0(), canFlowLeft.getValue1(), row, col);
+          waterFlowRight(canFlowRight.getValue0(), canFlowRight.getValue1(), row, col);
           return;
         }
       } else {
@@ -160,7 +116,32 @@ class Day17 {
     }
   }
 
-  Pair<Boolean, Integer> flowOfWaterDirection(
+  private void waterFlowLeft(boolean canFlow, int from, int row, int col) {
+    if (canFlow) {
+      IntStream.range(from, col).forEach(i -> slice2D[row - 1][i] = '|');
+      fillWater(slice2D, row, from);
+    } else {
+      IntStream.range(from + 1, col)
+          .forEach(
+              i -> {
+                if (slice2D[row - 1][i] != '~') slice2D[row - 1][i] = '|';
+              });
+      }
+  }
+  private void waterFlowRight(boolean canFlow, int to, int row, int col) {
+    if (canFlow) {
+      IntStream.range(col, to + 1).forEach(i -> slice2D[row - 1][i] = '|');
+      fillWater(slice2D, row - 1, to);
+    } else {
+      IntStream.range(col, to)
+          .forEach(
+              i -> {
+                if (slice2D[row - 1][i] != '~') slice2D[row - 1][i] = '|';
+              });
+    }
+  }
+
+  private Pair<Boolean, Integer> flowOfWaterDirection(
       char[][] slice2D, int row, int col, Direction direction) {
     if (direction == Direction.LEFT) {
       for (int i = col - 1; i >= 0; i--) {
@@ -204,7 +185,7 @@ class Day17 {
     }
   }
 
-  Triplet<Boolean, Integer, Integer> canHoldWater(char[][] slice2D, int y, int x) {
+  private Triplet<Boolean, Integer, Integer> canHoldWater(char[][] slice2D, int y, int x) {
     int firstLeftClayPosition = -1;
     int firstRightClayPosition = -1;
 
@@ -234,45 +215,26 @@ class Day17 {
         firstRightClayPosition);
   }
 
-  void displaySlice2D() {
-    for (int i = 0; i < slice2D.length; i++) {
-      for (int j = minX - 1; j < slice2D[i].length; j++) {
-        System.out.print(slice2D[i][j]);
-      }
-      System.out.println();
-    }
-  }
-
   int getResult1() {
     fillWater(slice2D, 1, 500);
-    int count = 0;
-    for (int i = minY; i <= maxY; i++) {
-      for (int j = 0; j <= maxX; j++) {
-        if (slice2D[i][j] == '~' || slice2D[i][j] == '|') {
-          count++;
-        }
-      }
-    }
-
-    return count;
+    return (int)
+        IntStream.rangeClosed(minY, maxY)
+            .flatMap(i -> CharBuffer.wrap(slice2D[i]).chars())
+            .filter(c -> c == '~' || c == '|')
+            .count();
   }
 
   int getResult2() {
     fillWater(slice2D, 1, 500);
-    int count = 0;
-    for (int i = minY; i <= maxY; i++) {
-      for (int j = 0; j <= maxX; j++) {
-        if (slice2D[i][j] == '~') {
-          count++;
-        }
-      }
-    }
-    return count;
+    return (int)
+        IntStream.rangeClosed(minY, maxY)
+            .flatMap(i -> CharBuffer.wrap(slice2D[i]).chars())
+            .filter(c -> c == '~')
+            .count();
   }
 
   enum Direction {
     LEFT,
-    RIGHT,
-    DOWN
+    RIGHT
   }
 }
