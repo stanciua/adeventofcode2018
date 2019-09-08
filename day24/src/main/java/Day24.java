@@ -1,20 +1,24 @@
-import org.javatuples.Pair;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.javatuples.Pair;
 
 class Day24 {
-  List<Group> infectionSystem;
-  List<Group> immuneSystem;
+  private List<Group> infectionSystem;
+  private List<Group> immuneSystem;
   private static final Pattern ImmuneSystemPattern = Pattern.compile("Immune System:");
   private static final Pattern InfectionPattern = Pattern.compile("Infection:");
   private static final Pattern groupPattern =
       Pattern.compile(
-          "(\\d+) units each with (\\d+) hit points (\\(.+\\) )?with an attack that does (\\d+) (\\w+) damage at initiative (\\d+)");
+          "(\\d+) units each with (\\d+) hit points (\\(.+\\) )?with an attack that does"
+              + " (\\d+) (\\w+) damage at initiative (\\d+)");
 
   Day24() throws Exception {
     infectionSystem = new ArrayList<>();
@@ -40,14 +44,14 @@ class Day24 {
         int numberOfUnits = Integer.valueOf(matcher.group(1));
         int hitPoints = Integer.valueOf(matcher.group(2));
         String weaknessAndImmunities = matcher.group(3);
-        List<AttackType> weaknesses = getWeakness(weaknessAndImmunities);
-        List<AttackType> immunities = getImmunities(weaknessAndImmunities);
+        List<AttackType> weaknesses = getWeaknessesOrImmunities(weaknessAndImmunities, "weak");
+        List<AttackType> immunities = getWeaknessesOrImmunities(weaknessAndImmunities, "immune");
         int attackDamage = Integer.valueOf(matcher.group(4));
         AttackType attackType = AttackType.from(matcher.group(5));
         int initiative = Integer.valueOf(matcher.group(6));
-        BattleSystem battleSystem = BattleSystem.immune;
+        BattleSystem battleSystem = BattleSystem.IMMUNE;
         if (isInfectionSystem) {
-          battleSystem = BattleSystem.infection;
+          battleSystem = BattleSystem.INFECTION;
         }
         Group group =
             new Group(
@@ -70,53 +74,33 @@ class Day24 {
     }
   }
 
-  static List<AttackType> getWeakness(String weaknessesAndImmunities) {
+  private static List<AttackType> getWeaknessesOrImmunities(
+      String weaknessesAndImmunities, String keyword) {
     List<AttackType> output = new ArrayList<>();
     if (weaknessesAndImmunities == null || weaknessesAndImmunities.length() == 0) {
       return output;
     }
 
-    if (!weaknessesAndImmunities.contains("weak to ")) {
+    if (!weaknessesAndImmunities.contains(keyword + " to ")) {
       return output;
     }
 
-    int indexOfWeaknesses = weaknessesAndImmunities.indexOf("weak to ") + "weak to ".length();
-    int indexOfEndWeaknesses = weaknessesAndImmunities.indexOf(";", indexOfWeaknesses);
-    if (indexOfEndWeaknesses == -1) {
-      indexOfEndWeaknesses = weaknessesAndImmunities.indexOf(")", indexOfWeaknesses);
+    int indexOfKeyword =
+        weaknessesAndImmunities.indexOf(keyword + " to ") + keyword.length() + " to ".length();
+    int indexOfEndKeyword = weaknessesAndImmunities.indexOf(";", indexOfKeyword);
+    if (indexOfEndKeyword == -1) {
+      indexOfEndKeyword = weaknessesAndImmunities.indexOf(")", indexOfKeyword);
     }
 
-    String weaknesses = weaknessesAndImmunities.substring(indexOfWeaknesses, indexOfEndWeaknesses);
-    Arrays.stream(weaknesses.split(","))
+    String result = weaknessesAndImmunities.substring(indexOfKeyword, indexOfEndKeyword);
+    Arrays.stream(result.split(","))
         .filter(e -> e.length() != 0)
         .forEach(e -> output.add(AttackType.from(e.strip())));
     return output;
   }
 
-  static List<AttackType> getImmunities(String weaknessesAndImmunities) {
-    List<AttackType> output = new ArrayList<>();
-    if (weaknessesAndImmunities == null || weaknessesAndImmunities.length() == 0) {
-      return output;
-    }
-
-    if (!weaknessesAndImmunities.contains("immune to ")) {
-      return output;
-    }
-
-    int indexOfWeaknesses = weaknessesAndImmunities.indexOf("immune to ") + "immune to ".length();
-    int indexOfEndWeaknesses = weaknessesAndImmunities.indexOf(";", indexOfWeaknesses);
-    if (indexOfEndWeaknesses == -1) {
-      indexOfEndWeaknesses = weaknessesAndImmunities.indexOf(")", indexOfWeaknesses);
-    }
-
-    String weaknesses = weaknessesAndImmunities.substring(indexOfWeaknesses, indexOfEndWeaknesses);
-    Arrays.stream(weaknesses.split(","))
-        .filter(e -> e.length() != 0)
-        .forEach(e -> output.add(AttackType.from(e.strip())));
-    return output;
-  }
-
-  List<Pair<Group, Optional<Group>>> targetSelection(List<Group> attackers, List<Group> defenders) {
+  private List<Pair<Group, Optional<Group>>> targetSelection(
+      List<Group> attackers, List<Group> defenders) {
     List<Group> attackersGroupOrder =
         attackers.stream()
             .sorted(
@@ -126,10 +110,10 @@ class Day24 {
             .collect(Collectors.toCollection(ArrayList::new));
     // next we need pair one attacking group to one defending group
     return getAttackAndDefendGroupPair(
-        attackersGroupOrder, defenders.stream().collect(Collectors.toCollection(ArrayList::new)));
+        attackersGroupOrder, new ArrayList<>(defenders));
   }
 
-  boolean attackPhase(
+  private boolean attackPhase(
       List<Pair<Group, Optional<Group>>> immune, List<Pair<Group, Optional<Group>>> infection) {
     // we put all the attacks in on place in order to sorted them based on reverse initiative
     var allAttacks = new ArrayList<Pair<Group, Optional<Group>>>();
@@ -140,65 +124,53 @@ class Day24 {
 
     // we need to check if damage is dealt to the defending groups, if group units don't change we
     // end it up in a deadlock
-    var oldImmuneGroupUnits =
+    final var oldImmuneGroupUnits =
         immuneSystem.stream()
             .mapToInt(g -> g.numberOfUnits)
             .boxed()
             .collect(Collectors.toCollection(ArrayList::new));
-    var oldInfectionGroupUnits =
+    final var oldInfectionGroupUnits =
         infectionSystem.stream()
             .mapToInt(g -> g.numberOfUnits)
             .boxed()
             .collect(Collectors.toCollection(ArrayList::new));
     for (var attack : allAttacks) {
-      if (attack.getValue1().isEmpty()) {
-        continue;
-      }
-      if (!battle(attack)) {
-        return false;
-      }
+      battle(attack);
     }
     // remove any groups that have zero units
     immuneSystem.removeIf(g -> g.numberOfUnits == 0);
     infectionSystem.removeIf(g -> g.numberOfUnits == 0);
 
-    var newImmuneNumberOfUnits =
+    final var newImmuneNumberOfUnits =
         immuneSystem.stream()
             .mapToInt(g -> g.numberOfUnits)
             .boxed()
             .collect(Collectors.toCollection(ArrayList::new));
-    var newInfectionNumberOfUnits =
+    final var newInfectionNumberOfUnits =
         infectionSystem.stream()
             .mapToInt(g -> g.numberOfUnits)
             .boxed()
             .collect(Collectors.toCollection(ArrayList::new));
-    if (oldImmuneGroupUnits.size() == newImmuneNumberOfUnits.size()
-        && oldImmuneGroupUnits.containsAll(newImmuneNumberOfUnits)
-        && newImmuneNumberOfUnits.containsAll(oldImmuneGroupUnits)
-        && oldInfectionGroupUnits.size() == newInfectionNumberOfUnits.size()
-        && oldInfectionGroupUnits.containsAll(newInfectionNumberOfUnits)
-        && newInfectionNumberOfUnits.containsAll(oldInfectionGroupUnits)) {
-      return false;
-    }
-
-    return true;
+    return oldImmuneGroupUnits.size() != newImmuneNumberOfUnits.size()
+        || !oldImmuneGroupUnits.containsAll(newImmuneNumberOfUnits)
+        || !newImmuneNumberOfUnits.containsAll(oldImmuneGroupUnits)
+        || oldInfectionGroupUnits.size() != newInfectionNumberOfUnits.size()
+        || !oldInfectionGroupUnits.containsAll(newInfectionNumberOfUnits)
+        || !newInfectionNumberOfUnits.containsAll(oldInfectionGroupUnits);
   }
 
-  boolean isBattleOver() {
+  private boolean isBattleOver() {
     // check to see if the battle is over and one army is victorious
-    if (immuneSystem.size() == 0 || infectionSystem.size() == 0) {
-      return true;
-    }
-    return false;
+    return immuneSystem.size() == 0 || infectionSystem.size() == 0;
   }
 
-  int getResult1() {
-      return getRemainingUnitsForSystem(0, BattleSystem.infection);
-  }
-
-  boolean battle(Pair<Group, Optional<Group>> attack) {
+  private void battle(Pair<Group, Optional<Group>> attack) {
     int damage;
 
+    if (attack.getValue1().isEmpty()) {
+      return;
+    }
+    
     Group attackingGroup = attack.getValue0();
     Group defendingGroup = attack.getValue1().get();
 
@@ -216,24 +188,21 @@ class Day24 {
     } else {
       defendingGroup.numberOfUnits -= damage / defendingGroup.hitPoint;
     }
-    return true;
   }
 
-  List<Pair<Group, Optional<Group>>> getAttackAndDefendGroupPair(
+  private List<Pair<Group, Optional<Group>>> getAttackAndDefendGroupPair(
       List<Group> attackGroups, List<Group> defendGroups) {
     List<Pair<Group, Optional<Group>>> attackDefendPairGroups = new ArrayList<>();
     for (var attackingGroup : attackGroups) {
       var defendingGroup = getMostDamageGroup(attackingGroup, defendGroups);
-      if (defendingGroup.isPresent()) {
-        defendGroups.remove(defendingGroup.get());
-      }
+      defendingGroup.ifPresent(defendGroups::remove);
       attackDefendPairGroups.add(new Pair<>(attackingGroup, defendingGroup));
     }
 
     return attackDefendPairGroups;
   }
 
-  Optional<Group> getMostDamageGroup(Group group, List<Group> enemyGroups) {
+  private Optional<Group> getMostDamageGroup(Group group, List<Group> enemyGroups) {
     List<Group> groupsWithMostDamage = new ArrayList<>();
     int damage;
     int maxDamage = Integer.MIN_VALUE;
@@ -269,7 +238,7 @@ class Day24 {
     return Optional.empty();
   }
 
-  int getRemainingUnitsForSystem(int boost, BattleSystem system) {
+  private int getRemainingUnitsForSystem(int boost, BattleSystem system) {
     // we need to work with the copies, in order to preserve original after each iteration
     var immuneSystemClone =
         immuneSystem.stream()
@@ -302,19 +271,18 @@ class Day24 {
                         g.immunities))
             .collect(Collectors.toCollection(ArrayList::new));
     immuneSystem.forEach(g -> g.setAttackDamage(g.attackDamage + boost));
-    while (true) {
+    do {
       if (!attackPhase(
           targetSelection(immuneSystem, infectionSystem),
           targetSelection(infectionSystem, immuneSystem))) {
+        immuneSystem = immuneSystemClone;
+        infectionSystem = infectionSystemClone;
         return -1;
       }
 
-      if (isBattleOver()) {
-        break;
-      }
-    }
+    } while (!isBattleOver());
     int remainingUnits = -1;
-    if (system == BattleSystem.infection) {
+    if (system == BattleSystem.INFECTION) {
       remainingUnits = infectionSystem.stream().mapToInt(g -> g.numberOfUnits).sum();
     } else {
       if (immuneSystem.size() != 0) {
@@ -326,14 +294,14 @@ class Day24 {
     return remainingUnits;
   }
 
-  int getBoostValueForImmuneSystemToWin() {
+  private int getBoostValueForImmuneSystemToWin() {
     // use binary search to find the leftmost boost value
     int l = 0;
+    // use the upper bound value from the input example and just check all the below values
     int r = 1570;
     while (l < r) {
       int m = Math.floorDiv((l + r), 2);
-      System.out.println(m);
-      if (getRemainingUnitsForSystem(m, BattleSystem.immune) == -1) {
+      if (getRemainingUnitsForSystem(m, BattleSystem.IMMUNE) == -1) {
         l = m + 1;
       } else {
         r = m;
@@ -342,19 +310,23 @@ class Day24 {
     return l;
   }
 
+  int getResult1() {
+    return getRemainingUnitsForSystem(0, BattleSystem.INFECTION);
+  }
+
   int getResult2() {
     int boost = getBoostValueForImmuneSystemToWin();
-    return getRemainingUnitsForSystem(boost, BattleSystem.immune);
+    return getRemainingUnitsForSystem(boost, BattleSystem.IMMUNE);
   }
 
   static class Group {
-    int groupId;
+    final int groupId;
     int numberOfUnits;
-    int hitPoint;
+    final int hitPoint;
     int attackDamage;
-    AttackType attackType;
+    final AttackType attackType;
 
-    public Group(
+    Group(
         int groupId,
         int numberOfUnits,
         int hitPoint,
@@ -375,7 +347,7 @@ class Day24 {
       this.immunities = immunities;
     }
 
-    public void setAttackDamage(int attackDamage) {
+    void setAttackDamage(int attackDamage) {
       this.attackDamage = attackDamage;
     }
 
@@ -403,7 +375,7 @@ class Day24 {
           + '}';
     }
 
-    public int getInitiative() {
+    int getInitiative() {
       return initiative;
     }
 
@@ -411,15 +383,15 @@ class Day24 {
       return numberOfUnits * attackDamage;
     }
 
-    int initiative;
-    BattleSystem battleSystem;
-    List<AttackType> weaknesses;
-    List<AttackType> immunities;
+    final int initiative;
+    final BattleSystem battleSystem;
+    final List<AttackType> weaknesses;
+    final List<AttackType> immunities;
   }
 
   enum BattleSystem {
-    immune,
-    infection
+    IMMUNE,
+    INFECTION
   }
 
   enum AttackType {
@@ -430,7 +402,7 @@ class Day24 {
     Slashing;
 
     static AttackType from(String attackType) {
-      AttackType output = Bludgeoning;
+      AttackType output;
       switch (attackType) {
         case "bludgeoning":
           output = Bludgeoning;
